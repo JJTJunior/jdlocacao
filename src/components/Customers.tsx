@@ -90,48 +90,68 @@ export function Customers({ userId, initialSearch = '' }: CustomersProps) {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 text-sm uppercase tracking-wider">
-                <th className="px-6 py-4 font-medium">Nome / Razão Social</th>
-                <th className="px-6 py-4 font-medium">Contato</th>
-                <th className="px-6 py-4 font-medium">Documento</th>
-                <th className="px-6 py-4 font-medium">Status</th>
-                <th className="px-6 py-4 font-medium text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {loading ? (
-                <tr><td colSpan={5} className="px-6 py-8 text-center text-slate-400"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></td></tr>
-              ) : filtered.map(customer => (
-                <tr key={customer.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-medium text-slate-900">{customer.name}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2 text-sm text-slate-600"><Mail className="w-4 h-4 text-slate-400" />{customer.email || '-'}</div>
-                      <div className="flex items-center gap-2 text-sm text-slate-600"><Phone className="w-4 h-4 text-slate-400" />{customer.phone}</div>
+        {/* Customers Grid/Cards Layout */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
+          {loading ? (
+            <div className="col-span-full p-12 text-center bg-white rounded-2xl border border-slate-100 shadow-sm">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-slate-400" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="col-span-full p-12 text-center bg-white rounded-2xl border border-slate-100 shadow-sm text-slate-400 text-sm">
+              Nenhum cliente encontrado.
+            </div>
+          ) : (
+            filtered.map(customer => (
+              <div key={customer.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-start gap-2">
+                    <h3 className="font-bold text-slate-800 text-base leading-tight group-hover:text-indigo-600 transition-colors uppercase">{customer.name}</h3>
+                    <span className="flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100 uppercase tracking-tighter">
+                      Ativo
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 text-slate-600">
+                      <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100 group-hover:bg-indigo-50 group-hover:border-indigo-100 transition-colors">
+                        <Mail className="w-4 h-4 text-slate-400 group-hover:text-indigo-500" />
+                      </div>
+                      <span className="text-sm truncate">{customer.email || 'Sem e-mail'}</span>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-slate-700">{customer.document || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Ativo</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => handleEdit(customer)} className="text-indigo-600 hover:text-indigo-900 p-1 rounded-md hover:bg-indigo-50"><Edit className="w-4 h-4" /></button>
-                      <button onClick={() => setCustomerToDelete(customer.id)} className="text-red-600 hover:text-red-900 p-1 rounded-md hover:bg-red-50"><Trash2 className="w-4 h-4" /></button>
+
+                    <div className="flex items-center gap-3 text-slate-600">
+                      <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100 group-hover:bg-indigo-50 group-hover:border-indigo-100 transition-colors">
+                        <Phone className="w-4 h-4 text-slate-400 group-hover:text-indigo-500" />
+                      </div>
+                      <span className="text-sm font-medium">{customer.phone}</span>
                     </div>
-                  </td>
-                </tr>
-              ))}
-              {!loading && filtered.length === 0 && (
-                <tr><td colSpan={5} className="px-6 py-8 text-center text-slate-500">Nenhum cliente encontrado.</td></tr>
-              )}
-            </tbody>
-          </table>
+                  </div>
+
+                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">Documento</span>
+                    <span className="text-sm text-slate-700 font-medium">{customer.document || '---'}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-slate-50">
+                  <button 
+                    onClick={() => handleEdit(customer)} 
+                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100" 
+                    title="Editar"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={() => setCustomerToDelete(customer.id)} 
+                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100" 
+                    title="Excluir"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

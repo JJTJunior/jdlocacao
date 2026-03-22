@@ -147,39 +147,82 @@ export function Equipments({ userId, initialSearch = '' }: EquipmentsProps) {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 text-sm uppercase tracking-wider">
-                <th className="px-6 py-4 font-medium">Equipamento</th>
-                <th className="px-6 py-4 font-medium">Categoria</th>
-                <th className="px-6 py-4 font-medium">Estoque</th>
-                <th className="px-6 py-4 font-medium">Preços</th>
-                <th className="px-6 py-4 font-medium text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {loading ? (
-                <tr><td colSpan={5} className="px-6 py-8 text-center text-slate-400"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></td></tr>
-              ) : filtered.map(eq => (
-                <tr key={eq.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap"><div className="font-medium text-slate-900">{eq.name}</div><div className="text-sm text-slate-500">Código: {eq.code}</div></td>
-                  <td className="px-6 py-4 whitespace-nowrap"><span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">{eq.category}</span></td>
-                  <td className="px-6 py-4 whitespace-nowrap"><div className="flex gap-2 text-xs"><span className="text-green-600 font-medium">{eq.stock_available} disp.</span><span className="text-blue-600 font-medium">{eq.stock_rented} alug.</span><span className="text-orange-600 font-medium">{eq.stock_maintenance} man.</span></div></td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700"><div>Diária: R$ {fmt(eq.price_per_day)}</div><div>Semanal: R$ {fmt(eq.price_per_week)}</div><div>Mensal: R$ {fmt(eq.price_per_month)}</div></td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => handleEdit(eq)} className="text-indigo-600 hover:text-indigo-900 p-1 rounded-md hover:bg-indigo-50"><Edit className="w-4 h-4" /></button>
-                      <button onClick={() => setEquipmentToDelete(eq.id)} className="text-red-600 hover:text-red-900 p-1 rounded-md hover:bg-red-50"><Trash2 className="w-4 h-4" /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {!loading && filtered.length === 0 && <tr><td colSpan={5} className="px-6 py-8 text-center text-slate-500">Nenhum equipamento encontrado.</td></tr>}
-            </tbody>
-          </table>
-        </div>
+      {/* Equipments Grid/Cards Layout */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {loading ? (
+          <div className="col-span-full p-12 text-center bg-white rounded-2xl border border-slate-100 shadow-sm">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-slate-400" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="col-span-full p-12 text-center bg-white rounded-2xl border border-slate-100 shadow-sm text-slate-400 text-sm">
+            Nenhum equipamento encontrado.
+          </div>
+        ) : (
+          filtered.map(eq => (
+            <div key={eq.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex justify-between items-start gap-2">
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-base leading-tight group-hover:text-indigo-600 transition-colors">{eq.name}</h3>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">Cód: {eq.code}</p>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 uppercase tracking-tighter">
+                    {eq.category}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 pt-1">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">Disponível</span>
+                    <span className="text-sm font-black text-emerald-600">{eq.stock_available}</span>
+                  </div>
+                  <div className="w-px h-6 bg-slate-100" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">Alugado</span>
+                    <span className="text-sm font-black text-blue-600">{eq.stock_rented}</span>
+                  </div>
+                  <div className="w-px h-6 bg-slate-100" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">Manut.</span>
+                    <span className="text-sm font-black text-orange-600">{eq.stock_maintenance}</span>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 rounded-xl p-3 space-y-1 border border-slate-100">
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-slate-500 font-medium">Diária:</span>
+                    <span className="text-slate-700 font-bold">R$ {fmt(eq.price_per_day)}</span>
+                  </div>
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-slate-500 font-medium">Semanal:</span>
+                    <span className="text-slate-700 font-bold">R$ {fmt(eq.price_per_week)}</span>
+                  </div>
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-slate-500 font-medium">Mensal:</span>
+                    <span className="text-slate-700 font-bold">R$ {fmt(eq.price_per_month)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 mt-4 pt-4 border-t border-slate-50">
+                <button 
+                  onClick={() => handleEdit(eq)} 
+                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100" 
+                  title="Editar"
+                >
+                  <Edit className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => setEquipmentToDelete(eq.id)} 
+                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100" 
+                  title="Excluir"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       <Modal isOpen={isModalOpen} onClose={closeModal} title={editingId ? 'Editar Equipamento' : 'Novo Equipamento'}>

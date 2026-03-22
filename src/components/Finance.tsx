@@ -270,35 +270,70 @@ export function Finance({ userId }: FinanceProps) {
         ) : combinedTransactions.length === 0 ? (
           <div className="p-12 text-center text-slate-400 text-sm">Nenhuma transação registrada</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead><tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider"><th className="px-6 py-4 font-medium">Data</th><th className="px-6 py-4 font-medium">Descrição</th><th className="px-6 py-4 font-medium">Categoria</th><th className="px-6 py-4 font-medium">Valor</th><th className="px-6 py-4 font-medium text-right">Ações</th></tr></thead>
-              <tbody className="divide-y divide-slate-200">
-                {[...combinedTransactions]
-                  .filter(t => categoryFilter === 'all' || t.category === categoryFilter)
-                  .filter(t => monthFilter === 'all' || t.date.startsWith(monthFilter))
-                  .sort((a, b) => b.date.localeCompare(a.date))
-                  .map(t => (
-                  <tr key={t.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{new Date(t.date + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
-                    <td className="px-6 py-4 whitespace-nowrap"><div className="font-medium text-sm text-slate-900 truncate max-w-[200px]" title={t.description}>{t.description}</div><div className="text-xs text-slate-500">{t.type === 'income' ? 'Receita' : 'Despesa'}</div></td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{t.category}</td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>{t.type === 'income' ? '+' : '-'} {fmt(Number(t.amount))}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+          <>
+            {/* Transactions Grid/Cards Layout */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 text-left">
+              {[...combinedTransactions]
+                .filter(t => categoryFilter === 'all' || t.category === categoryFilter)
+                .filter(t => monthFilter === 'all' || t.date.startsWith(monthFilter))
+                .sort((a, b) => b.date.localeCompare(a.date))
+                .map(t => (
+                  <div key={t.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between">
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[11px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                          {new Date(t.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-tighter ${
+                          t.type === 'income' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'
+                        }`}>
+                          {t.category}
+                        </span>
+                      </div>
+
+                      <div>
+                        <h4 className="font-bold text-slate-800 text-sm mb-1 line-clamp-2" title={t.description}>
+                          {t.description}
+                        </h4>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                          {t.type === 'income' ? 'Receita' : 'Despesa'}
+                        </span>
+                      </div>
+
+                      <div className={`text-lg font-black ${t.type === 'income' ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {t.type === 'income' ? '+' : '-'} {fmt(Number(t.amount))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-slate-50">
                       {!t.isMaintenance && t.category !== 'Aluguel' ? (
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => handleEdit(t)} className="text-indigo-600 hover:text-indigo-900 p-1 rounded-md hover:bg-indigo-50"><Save className="w-4 h-4" /></button>
-                          <button onClick={() => remove(t.id)} className="text-slate-400 hover:text-red-600 p-1 rounded-md hover:bg-red-50"><Trash2 className="w-4 h-4" /></button>
-                        </div>
+                        <>
+                          <button 
+                            onClick={() => handleEdit(t)} 
+                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-100" 
+                            title="Salvar/Editar"
+                          >
+                            <Save className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => remove(t.id)} 
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100" 
+                            title="Excluir"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
                       ) : (
-                        <span className="text-xs text-slate-400 italic">Automático</span>
+                        <span className="text-[10px] text-slate-300 font-bold uppercase italic tracking-widest bg-slate-50/50 px-2 py-1 rounded-md">
+                          Automático
+                        </span>
                       )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </div>
+                ))
+              }
+            </div>
+          </>
         )}
       </div>
 
