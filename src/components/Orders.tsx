@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus, Search, Filter, Eye, Printer, Edit, Trash2, X, Loader2, Calendar, DollarSign, User, Clock, FileText, CheckCircle2, ChevronDown, Phone, Save } from 'lucide-react';
 import { Modal } from './Modal';
 import { useSupabaseTable } from '../lib/useSupabaseTable';
@@ -171,18 +171,16 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
         const eq = equipments.find(e => e.id === value);
         if (eq) {
           const days = prev.end_date && prev.start_date 
-            ? Math.max(1, Math.ceil((new Date(prev.end_date).getTime() - new Date(prev.start_date).getTime()) / 86400000))
+            ? Math.max(1, Math.ceil((new Date(prev.end_date + 'T12:00:00').getTime() - new Date(prev.start_date + 'T12:00:00').getTime()) / 86400000))
             : 1;
           
-          let unitPrice = eq.price_per_day || (eq.price_per_week / 7) || (eq.price_per_month / 30) || 0;
-          if (days >= 30 && eq.price_per_month > 0) unitPrice = eq.price_per_month / 30; // Base monthly
-          else if (days >= 7 && eq.price_per_week > 0) unitPrice = eq.price_per_week / 7; // Base weekly
-          
+          const flatPrice = calculateProratedPrice(eq, days);
+
           items[idx] = { 
             ...items[idx], 
             equipmentId: eq.id, 
             equipmentName: eq.name, 
-            price: Math.round(unitPrice * 100) / 100, 
+            price: Math.round(flatPrice * 100) / 100, 
             lotNumber: eq.lots && eq.lots.length > 0 ? eq.lots[0].lot_number : '' 
           };
         }
@@ -192,42 +190,62 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
       return { ...prev, items };
     });
   };
+  // Helper to calculate prorated price based on duration
+  const calculateProratedPrice = useCallback((eq: EquipmentRow, days: number) => {
+    const pDay = Number(eq.price_per_day) || 0;
+    const pWeek = Number(eq.price_per_week) || 0;
+    const pMonth = Number(eq.price_per_month) || 0;
 
-  // Auto-calculate total and update unit prices when dates change
+    if (days >= 30 && pMonth > 0) {
+      const months = Math.floor(days / 30);
+      const remDays = days % 30;
+      return (months * pMonth) + (remDays * (pMonth / 30));
+    }
+    if (days >= 7 && pWeek > 0) {
+      const weeks = Math.floor(days / 7);
+      const remDays = days % 7;
+      return (weeks * pWeek) + (remDays * pDay);
+    }
+    return days * pDay;
+  }, []);
+
+  // Update item prices only when dates change OR equipment changes
+  // This logic picks the best rate from the equipment's registration
+  const refreshItemPrices = useCallback((items: any[], startDate: string, endDate: string) => {
+    if (!startDate || !endDate) return items;
+    const days = Math.max(1, Math.ceil((new Date(endDate + 'T12:00:00').getTime() - new Date(startDate + 'T12:00:00').getTime()) / 86400000));
+    
+    return items.map(item => {
+      const eq = equipments.find(e => e.id === item.equipmentId);
+      if (!eq) return item;
+
+      const flatPrice = calculateProratedPrice(eq, days);
+      return { ...item, price: Math.round(flatPrice * 100) / 100 };
+    });
+  }, [equipments, calculateProratedPrice]);
+
+  // When dates change, automatically refresh prices based on best rate
   useEffect(() => {
     if (formData.start_date && formData.end_date && formData.items.length > 0) {
-      const days = Math.max(1, Math.ceil((new Date(formData.end_date + 'T12:00:00').getTime() - new Date(formData.start_date + 'T12:00:00').getTime()) / 86400000));
-      
-      const total = formData.items.reduce((s, item) => s + (item.price || 0) * item.quantity, 0) * days;
+      const updatedItems = refreshItemPrices(formData.items, formData.start_date, formData.end_date);
+      // Only update if prices actually changed to avoid infinite loop
+      const hasChanged = JSON.stringify(updatedItems.map(i => i.price)) !== JSON.stringify(formData.items.map(i => i.price));
+      if (hasChanged) {
+        setFormData(prev => ({ ...prev, items: updatedItems }));
+      }
+    }
+  }, [formData.start_date, formData.end_date, refreshItemPrices]);
+
+  // Final total calculation
+  useEffect(() => {
+    if (formData.start_date && formData.end_date && formData.items.length > 0) {
+      const total = formData.items.reduce((s, item) => s + (Number(item.price) * item.quantity), 0);
       const roundedTotal = Math.round(total * 100) / 100;
-      
       if (formData.total_amount !== roundedTotal) {
         setFormData(prev => ({ ...prev, total_amount: roundedTotal }));
       }
     }
-  }, [formData.start_date, formData.end_date, formData.items]);
-
-  // Update item prices only when dates change to reflect best rate (daily/weekly/monthly)
-  useEffect(() => {
-    if (formData.start_date && formData.end_date && formData.items.length > 0) {
-      const days = Math.max(1, Math.ceil((new Date(formData.end_date + 'T12:00:00').getTime() - new Date(formData.start_date + 'T12:00:00').getTime()) / 86400000));
-      
-      setFormData(prev => ({
-        ...prev,
-        items: prev.items.map(item => {
-          const eq = equipments.find(e => e.id === item.equipmentId);
-          if (!eq) return item;
-
-          let unitPrice = eq.price_per_day || (eq.price_per_week / 7) || (eq.price_per_month / 30) || 0;
-          if (days >= 30 && eq.price_per_month > 0) unitPrice = eq.price_per_month / 30;
-          else if (days >= 7 && eq.price_per_week > 0) unitPrice = eq.price_per_week / 7;
-          
-          return { ...item, price: Math.round(unitPrice * 100) / 100 };
-        })
-      }));
-    }
-    // Only re-run when dates change
-  }, [formData.start_date, formData.end_date, equipments]);
+  }, [formData.items]);
 
   const handleEdit = (order: OrderRow) => {
     setFormError(null);
@@ -967,16 +985,43 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
                       </div>
                     </div>
 
-                    <div className="w-20">
-                      <input 
-                        required 
-                        type="number" 
-                        min="1" 
-                        className="w-full px-2 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-bold text-center" 
-                        value={item.quantity} 
-                        onChange={e => handleItemChange(i, 'quantity', parseInt(e.target.value) || 1)} 
-                      />
-                    </div>
+                      <div className="space-y-1 my-2">
+                        <div className="flex justify-between items-center bg-slate-100/50 px-2 py-1 rounded-md mb-2">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Período</span>
+                          <span className="text-[10px] text-indigo-600 font-bold">
+                            {formData.start_date && formData.end_date 
+                              ? `${Math.max(1, Math.ceil((new Date(formData.end_date + 'T12:00:00').getTime() - new Date(formData.start_date + 'T12:00:00').getTime()) / 86400000))} dias`
+                              : '0 dias'}
+                          </span>
+                        </div>
+                        <div className="flex gap-2 items-center">
+                          <div className="w-24">
+                            <div className="relative">
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">R$</span>
+                              <input 
+                                required 
+                                type="number" 
+                                step="0.01"
+                                className="w-full pl-7 pr-2 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-bold text-indigo-600" 
+                                value={item.price} 
+                                title="Valor total para este item no período calculado"
+                                onChange={e => handleItemChange(i, 'price', parseFloat(e.target.value) || 0)} 
+                              />
+                            </div>
+                          </div>
+  
+                          <div className="w-20">
+                            <input 
+                              required 
+                              type="number" 
+                              min="1" 
+                              className="w-full px-2 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-bold text-center text-slate-800" 
+                              value={item.quantity} 
+                              onChange={e => handleItemChange(i, 'quantity', parseInt(e.target.value) || 1)} 
+                            />
+                          </div>
+                        </div>
+                      </div>
                     <button type="button" onClick={() => handleRemoveItem(i)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
                       <X className="w-4 h-4" />
                     </button>
