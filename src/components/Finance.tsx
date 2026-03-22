@@ -222,47 +222,51 @@ export function Finance({ userId }: FinanceProps) {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-4">
-            <h3 className="text-sm font-bold text-slate-800 whitespace-nowrap">Transações Registradas</h3>
-            <div className="relative">
-              <Filter className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <select 
-                value={categoryFilter} 
-                onChange={e => setCategoryFilter(e.target.value)}
-                className="pl-8 pr-8 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] bg-white cursor-pointer hover:bg-slate-50 transition-colors appearance-none"
-              >
-                <option value="all">Todas Categorias</option>
-                {Array.from(new Set(combinedTransactions.map(t => t.category))).sort().map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-            <div className="relative">
-              <Filter className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <select 
-                value={monthFilter} 
-                onChange={e => setMonthFilter(e.target.value)}
-                className="pl-8 pr-8 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] bg-white cursor-pointer hover:bg-slate-50 transition-colors appearance-none"
-              >
-                <option value="all">Todo o Período</option>
-                {Array.from(new Set(combinedTransactions.map(t => t.date.slice(0, 7))))
-                  .sort((a, b) => b.localeCompare(a))
-                  .map(month => {
-                    const [year, mo] = month.split('-');
-                    const date = new Date(parseInt(year), parseInt(mo) - 1);
-                    const label = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-                    return (
-                      <option key={month} value={month}>
-                        {label.charAt(0).toUpperCase() + label.slice(1)}
-                      </option>
-                    );
-                  })}
-              </select>
+        <div className="p-4 border-b border-slate-200 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 w-full lg:w-auto">
+            <h3 className="text-sm font-bold text-slate-800 whitespace-nowrap mr-2">Transações Registradas</h3>
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <div className="relative flex-1 sm:flex-none min-w-[140px]">
+                <Filter className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <select 
+                  value={categoryFilter} 
+                  onChange={e => setCategoryFilter(e.target.value)}
+                  className="w-full pl-8 pr-8 py-2 border border-slate-200 rounded-lg text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] bg-white cursor-pointer hover:bg-slate-50 transition-colors appearance-none"
+                >
+                  <option value="all">Todas Categorias</option>
+                  {Array.from(new Set(combinedTransactions.map(t => t.category))).sort().map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3 h-3 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
+              <div className="relative flex-1 sm:flex-none min-w-[140px]">
+                <Filter className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <select 
+                  value={monthFilter} 
+                  onChange={e => setMonthFilter(e.target.value)}
+                  className="w-full pl-8 pr-8 py-2 border border-slate-200 rounded-lg text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] bg-white cursor-pointer hover:bg-slate-50 transition-colors appearance-none"
+                >
+                  <option value="all">Todo o Período</option>
+                  {Array.from(new Set(combinedTransactions.map(t => t.date.slice(0, 7))))
+                    .sort((a, b) => b.localeCompare(a))
+                    .map(month => {
+                      const [year, mo] = month.split('-');
+                      const date = new Date(parseInt(year), parseInt(mo) - 1);
+                      const label = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+                      return (
+                        <option key={month} value={month}>
+                          {label.charAt(0).toUpperCase() + label.slice(1)}
+                        </option>
+                      );
+                    })}
+                </select>
+                <ChevronDown className="w-3 h-3 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <button onClick={() => handleOpenModal('expense')} className="bg-[#1e3a5f] text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-[#152a45] transition-colors"><Plus className="w-4 h-4" />Nova Despesa</button>
+          <div className="flex items-center gap-3 w-full lg:w-auto mt-2 lg:mt-0">
+            <button onClick={() => handleOpenModal('expense')} className="w-full lg:w-auto bg-[#1e3a5f] text-white px-4 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#152a45] transition-colors"><Plus className="w-4 h-4" />Nova Despesa</button>
           </div>
         </div>
         {loading ? (
