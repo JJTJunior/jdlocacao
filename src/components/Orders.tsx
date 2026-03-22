@@ -336,7 +336,7 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
     if (!pw) { alert('Por favor, permita popups para imprimir.'); return; }
 
     // Fetch company settings and full customer data for the receipt
-    const { data: company } = await supabase.from('company_settings').select('*').eq('user_id', userId).single();
+    const { data: company } = await supabase.from('company_settings').select('*').eq('user_id', userId).maybeSingle();
     const { data: customer } = await supabase.from('customers').select('*').eq('id', order.customer_id).single();
 
     const fmtDate = (s: string) => { 
@@ -543,10 +543,30 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
         ${copy('2ª Via - Empresa', '2ª Via - Empresa')}
         <script>
           window.onload = () => {
-            setTimeout(() => {
-              window.print();
-              // window.close();
-            }, 500);
+            const images = document.getElementsByTagName('img');
+            const totalImages = images.length;
+            let loadedImages = 0;
+
+            if (totalImages === 0) {
+              setTimeout(() => { window.print(); }, 500);
+              return;
+            }
+
+            const checkAllLoaded = () => {
+              loadedImages++;
+              if (loadedImages === totalImages) {
+                setTimeout(() => { window.print(); }, 500);
+              }
+            };
+
+            for (let i = 0; i < totalImages; i++) {
+              if (images[i].complete) {
+                checkAllLoaded();
+              } else {
+                images[i].onload = checkAllLoaded;
+                images[i].onerror = checkAllLoaded;
+              }
+            }
           }
         </script>
       </body>
