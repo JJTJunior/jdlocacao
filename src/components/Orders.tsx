@@ -169,7 +169,23 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
       const items = [...prev.items];
       if (field === 'equipmentId') {
         const eq = equipments.find(e => e.id === value);
-        if (eq) items[idx] = { ...items[idx], equipmentId: eq.id, equipmentName: eq.name, price: eq.price_per_week, lotNumber: eq.lots && eq.lots.length > 0 ? eq.lots[0].lot_number : '' };
+        if (eq) {
+          const days = prev.end_date && prev.start_date 
+            ? Math.max(1, Math.ceil((new Date(prev.end_date).getTime() - new Date(prev.start_date).getTime()) / 86400000))
+            : 1;
+          
+          let unitPrice = eq.price_per_day || (eq.price_per_week / 7) || (eq.price_per_month / 30) || 0;
+          if (days >= 30 && eq.price_per_month > 0) unitPrice = eq.price_per_month / 30; // Base monthly
+          else if (days >= 7 && eq.price_per_week > 0) unitPrice = eq.price_per_week / 7; // Base weekly
+          
+          items[idx] = { 
+            ...items[idx], 
+            equipmentId: eq.id, 
+            equipmentName: eq.name, 
+            price: Math.round(unitPrice * 100) / 100, 
+            lotNumber: eq.lots && eq.lots.length > 0 ? eq.lots[0].lot_number : '' 
+          };
+        }
       } else {
         items[idx] = { ...items[idx], [field]: value };
       }
@@ -177,14 +193,41 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
     });
   };
 
-  // Auto-calculate total
+  // Auto-calculate total and update unit prices when dates change
   useEffect(() => {
     if (formData.start_date && formData.end_date && formData.items.length > 0) {
-      const days = Math.max(1, Math.ceil((new Date(formData.end_date).getTime() - new Date(formData.start_date).getTime()) / 86400000));
-      const total = formData.items.reduce((s, item) => s + item.price * item.quantity, 0) * days;
-      setFormData(prev => ({ ...prev, total_amount: total }));
+      const days = Math.max(1, Math.ceil((new Date(formData.end_date + 'T12:00:00').getTime() - new Date(formData.start_date + 'T12:00:00').getTime()) / 86400000));
+      
+      const total = formData.items.reduce((s, item) => s + (item.price || 0) * item.quantity, 0) * days;
+      const roundedTotal = Math.round(total * 100) / 100;
+      
+      if (formData.total_amount !== roundedTotal) {
+        setFormData(prev => ({ ...prev, total_amount: roundedTotal }));
+      }
     }
   }, [formData.start_date, formData.end_date, formData.items]);
+
+  // Update item prices only when dates change to reflect best rate (daily/weekly/monthly)
+  useEffect(() => {
+    if (formData.start_date && formData.end_date && formData.items.length > 0) {
+      const days = Math.max(1, Math.ceil((new Date(formData.end_date + 'T12:00:00').getTime() - new Date(formData.start_date + 'T12:00:00').getTime()) / 86400000));
+      
+      setFormData(prev => ({
+        ...prev,
+        items: prev.items.map(item => {
+          const eq = equipments.find(e => e.id === item.equipmentId);
+          if (!eq) return item;
+
+          let unitPrice = eq.price_per_day || (eq.price_per_week / 7) || (eq.price_per_month / 30) || 0;
+          if (days >= 30 && eq.price_per_month > 0) unitPrice = eq.price_per_month / 30;
+          else if (days >= 7 && eq.price_per_week > 0) unitPrice = eq.price_per_week / 7;
+          
+          return { ...item, price: Math.round(unitPrice * 100) / 100 };
+        })
+      }));
+    }
+    // Only re-run when dates change
+  }, [formData.start_date, formData.end_date, equipments]);
 
   const handleEdit = (order: OrderRow) => {
     setFormError(null);
@@ -907,6 +950,21 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
                           <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-indigo-400 pointer-events-none" />
                         </div>
                       ) : null}
+                    </div>
+
+                    <div className="w-24">
+                      <div className="relative">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">R$</span>
+                        <input 
+                          required 
+                          type="number" 
+                          step="0.01"
+                          className="w-full pl-7 pr-2 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-bold text-slate-600" 
+                          value={item.price} 
+                          title="Preço inicial (diário)"
+                          onChange={e => handleItemChange(i, 'price', parseFloat(e.target.value) || 0)} 
+                        />
+                      </div>
                     </div>
 
                     <div className="w-20">
