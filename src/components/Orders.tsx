@@ -601,7 +601,18 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
           @media print {
             body { padding: 0; }
             .no-print { display: none; }
-            @page { margin: 1cm; }
+            .divider { display: none; }
+            .receipt-copy { 
+              page-break-after: always; 
+              break-after: page; 
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+            .receipt-copy:last-child { 
+              page-break-after: auto; 
+              break-after: auto; 
+            }
+            @page { margin: 1.5cm; }
           }
         </style>
       </head>
