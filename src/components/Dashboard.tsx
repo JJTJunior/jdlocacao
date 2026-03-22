@@ -75,8 +75,21 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
       const totalRented = eqList.reduce((sum, eq) => sum + (eq.stock_rented || 0), 0);
       const totalMaintenance = maintList.filter((m: any) => m.status === 'in_progress').reduce((sum: number, m: any) => sum + (m.quantity || 0), 0);
 
-      // Transactions
-      const monthRev = combinedTrans.filter(t => t.type === 'income' && t.date && t.date.startsWith(currentMonth)).reduce((sum, t) => sum + Number(t.amount), 0);
+      // Concluded Transactions for Current Metrics
+      const completedOrdersRev = ordList
+        .filter(o => o.status === 'completed' && o.end_date && o.end_date.startsWith(currentMonth))
+        .reduce((sum, o) => sum + Number(o.total_amount), 0);
+      
+      const otherIncomeRev = trList
+        .filter(t => t.type === 'income' && t.category !== 'Aluguel' && t.date && t.date.startsWith(currentMonth))
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+      
+      const monthRev = completedOrdersRev + otherIncomeRev;
+      
+      const monthExp = [
+        ...trList.filter(t => t.type === 'expense' && t.status === 'paid' && t.date && t.date.startsWith(currentMonth)),
+        ...maintList.filter((m: any) => m.status === 'completed' && m.cost > 0 && (m.end_date || m.start_date).startsWith(currentMonth))
+      ].reduce((sum, item) => sum + Number(item.amount || item.cost), 0);
       
       // Next Month Forecast: Active rentals returning next month + Any scheduled income transactions
       const nextMonthRentalsRev = ordList
@@ -88,21 +101,33 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
       
       const nextMonthRev = nextMonthRentalsRev + nextMonthScheduledRev;
       
-      const monthExp = combinedTrans.filter(t => t.type === 'expense' && t.date && t.date.startsWith(currentMonth)).reduce((sum, t) => sum + Number(t.amount), 0);
-      const yearInc = combinedTrans.filter(t => t.type === 'income' && t.date && t.date.startsWith(currentYear)).reduce((sum, t) => sum + Number(t.amount), 0);
-      const yearExp = combinedTrans.filter(t => t.type === 'expense' && t.date && t.date.startsWith(currentYear)).reduce((sum, t) => sum + Number(t.amount), 0);
+      const yearInc = [
+        ...trList.filter(t => t.type === 'income' && t.category !== 'Aluguel' && t.date && t.date.startsWith(currentYear)),
+        ...ordList.filter(o => o.status === 'completed' && o.end_date && o.end_date.startsWith(currentYear)).map(o => ({ amount: o.total_amount }))
+      ].reduce((sum, t) => sum + Number(t.amount), 0);
 
-      // Chart Data
+      const yearExp = [
+        ...trList.filter(t => t.type === 'expense' && t.status === 'paid' && t.date && t.date.startsWith(currentYear)),
+        ...maintList.filter((m: any) => m.status === 'completed' && m.cost > 0 && (m.end_date || m.start_date).startsWith(currentYear)).map(m => ({ amount: m.cost }))
+      ].reduce((sum, t) => sum + Number(t.amount), 0);
+
+      // Chart Data (Concluded only)
       const cData = Array.from({ length: 6 }, (_, i) => {
         const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         const name = `${d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '').slice(0, 3)}/${String(d.getFullYear()).slice(-2)}`;
-        const m = combinedTrans.filter(t => t.date && t.date.startsWith(key));
-        return {
-          name,
-          Receita: m.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0),
-          Despesa: m.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0)
-        };
+        
+        const income = [
+          ...trList.filter(t => t.type === 'income' && t.category !== 'Aluguel' && t.date && t.date.startsWith(key)),
+          ...ordList.filter(o => o.status === 'completed' && o.end_date && o.end_date.startsWith(key)).map(o => ({ amount: o.total_amount }))
+        ].reduce((s, t) => s + Number(t.amount), 0);
+
+        const expense = [
+          ...trList.filter(t => t.type === 'expense' && t.status === 'paid' && t.date && t.date.startsWith(key)),
+          ...maintList.filter((m: any) => m.status === 'completed' && m.cost > 0 && (m.end_date || m.start_date).startsWith(key)).map(m => ({ amount: m.cost }))
+        ].reduce((s, t) => s + Number(t.amount), 0);
+
+        return { name, Receita: income, Despesa: expense };
       });
 
       // Returns

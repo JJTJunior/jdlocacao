@@ -75,7 +75,7 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
     const description = `Locação: ${order.customer_name} (Contrato: ${order.contract_number || 'S/N'})`;
     const payload = {
       user_id: userId,
-      date: order.start_date,
+      date: order.status === 'completed' ? (order.end_date || new Date().toISOString().split('T')[0]) : order.start_date,
       description,
       category: 'Aluguel',
       type: 'income',

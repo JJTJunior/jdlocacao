@@ -22,8 +22,19 @@ interface MaintenanceRow {
   user_id?: string;
   equipment_name: string;
   start_date: string;
+  end_date?: string;
   reason: string;
   cost: number;
+  status: 'in_progress' | 'completed';
+}
+
+interface OrderRow {
+  id: string;
+  user_id?: string;
+  customer_name: string;
+  end_date: string;
+  total_amount: number;
+  status: 'pending' | 'rented' | 'completed';
 }
 
 interface Category {
@@ -39,21 +50,47 @@ interface FinanceProps {
 export function Finance({ userId }: FinanceProps) {
   const { rows: transactions, loading: loadingTrans, insert, update, remove } = useSupabaseTable<Transaction>('transactions', userId);
   const { rows: maintenances, loading: loadingMaint } = useSupabaseTable<MaintenanceRow>('maintenance', userId);
+  const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
   
-  const loading = loadingTrans || loadingMaint;
+  useEffect(() => {
+    if (!userId) return;
+    supabase.from('orders').select('id, user_id, customer_name, end_date, total_amount, status').eq('user_id', userId).then(({ data }) => {
+      if (data) setOrders(data);
+      setLoadingOrders(false);
+    });
+  }, [userId]);
+
+  const loading = loadingTrans || loadingMaint || loadingOrders;
 
   const combinedTransactions: Transaction[] = [
     ...transactions,
     ...maintenances.filter(m => m.cost > 0).map(m => ({
       id: `maint_${m.id}`,
       user_id: m.user_id,
-      date: m.start_date,
+      date: m.end_date || m.start_date,
       description: `Manutenção: ${m.equipment_name} (${m.reason})`,
       category: 'Manutenção',
       type: 'expense' as const,
       amount: m.cost,
-      status: 'paid' as const,
+      status: m.status === 'completed' ? 'paid' : 'pending' as const,
       isMaintenance: true
+    }))
+  ];
+
+  const concludedCombined = [
+    ...transactions.filter(t => t.status === 'paid'),
+    ...maintenances.filter(m => m.status === 'completed' && m.cost > 0).map(m => ({
+      id: `maint_${m.id}`,
+      date: m.end_date || m.start_date,
+      type: 'expense' as const,
+      amount: m.cost
+    })),
+    ...orders.filter(o => o.status === 'completed').map(o => ({
+      id: `order_${o.id}`,
+      date: o.end_date,
+      type: 'income' as const,
+      amount: o.total_amount
     }))
   ];
 
@@ -112,23 +149,46 @@ export function Finance({ userId }: FinanceProps) {
     closeModal();
   };
 
+  const now = new Date();
+
   const fmt = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const now = new Date();
-  const monthTrans = combinedTransactions.filter(t => { const d = t.date.slice(0,7); return d === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2,'0')}`; });
-  const yearTrans = combinedTransactions.filter(t => t.date.startsWith(`${now.getFullYear()}`));
+  const monthIncome = [
+    ...transactions.filter(t => t.type === 'income' && t.category !== 'Aluguel' && t.date.startsWith(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2,'0')}`)),
+    ...orders.filter(o => o.status === 'completed' && o.end_date && o.end_date.startsWith(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2,'0')}`))
+  ].reduce((s, item) => s + Number('amount' in item ? item.amount : item.total_amount), 0);
 
-  const monthIncome = monthTrans.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
-  const monthExpense = monthTrans.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
-  const yearIncome = yearTrans.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
-  const yearExpense = yearTrans.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
+  const monthExpense = [
+    ...transactions.filter(t => t.type === 'expense' && t.status === 'paid' && t.date.startsWith(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2,'0')}`)),
+    ...maintenances.filter(m => m.status === 'completed' && m.cost > 0 && (m.end_date || m.start_date).startsWith(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2,'0')}`))
+  ].reduce((s, item) => s + Number('amount' in item ? item.amount : item.cost), 0);
+
+  const yearIncome = [
+    ...transactions.filter(t => t.type === 'income' && t.category !== 'Aluguel' && t.date.startsWith(`${now.getFullYear()}`)),
+    ...orders.filter(o => o.status === 'completed' && o.end_date && o.end_date.startsWith(`${now.getFullYear()}`))
+  ].reduce((s, item) => s + Number('amount' in item ? item.amount : item.total_amount), 0);
+
+  const yearExpense = [
+    ...transactions.filter(t => t.type === 'expense' && t.status === 'paid' && t.date.startsWith(`${now.getFullYear()}`)),
+    ...maintenances.filter(m => m.status === 'completed' && m.cost > 0 && (m.end_date || m.start_date).startsWith(`${now.getFullYear()}`))
+  ].reduce((s, item) => s + Number('amount' in item ? item.amount : item.cost), 0);
 
   const chartData = Array.from({ length: 6 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`;
     const name = `${d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.','').slice(0,3)}/${String(d.getFullYear()).slice(-2)}`;
-    const m = combinedTransactions.filter(t => t.date.startsWith(key));
-    return { name, receita: m.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0), despesa: m.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0) };
+    
+    const income = [
+      ...transactions.filter(t => t.type === 'income' && t.category !== 'Aluguel' && t.date.startsWith(key)),
+      ...orders.filter(o => o.status === 'completed' && o.end_date && o.end_date.startsWith(key))
+    ].reduce((s, item) => s + Number('amount' in item ? item.amount : item.total_amount), 0);
+    
+    const expense = [
+      ...transactions.filter(t => t.type === 'expense' && t.status === 'paid' && t.date.startsWith(key)),
+      ...maintenances.filter(m => m.status === 'completed' && m.cost > 0 && (m.end_date || m.start_date).startsWith(key))
+    ].reduce((s, item) => s + Number('amount' in item ? item.amount : item.cost), 0);
+    
+    return { name, receita: income, despesa: expense };
   });
 
   return (
