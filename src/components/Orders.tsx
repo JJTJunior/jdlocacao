@@ -447,6 +447,15 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
           </div>
         </div>
 
+        ${order.observations ? `
+          <div class="observations-section">
+            <h3 class="section-title">OBSERVAÇÕES</h3>
+            <div class="observations-box">
+              <p>${order.observations.replace(/\n/g, '<br>')}</p>
+            </div>
+          </div>
+        ` : ''}
+
         <div class="signatures">
           <div class="sig-block">
             <div class="sig-line"></div>
@@ -514,6 +523,9 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
           .sig-line { border-top: 1.5px solid #334155; margin-bottom: 8px; }
           .sig-label { font-size: 11px; color: #64748b; font-weight: 700; }
           .sig-name { font-size: 12px; color: #0f172a; font-weight: 800; margin-top: 2px; }
+
+          .observations-section { margin-bottom: 25px; }
+          .observations-box { background: #fff; border: 1.5px dashed #e2e8f0; border-radius: 12px; padding: 15px; font-size: 13px; color: #475569; min-height: 60px; line-height: 1.6; }
           
           .divider { margin: 40px 0; border-top: 2px dashed #cbd5e1; position: relative; }
           .divider::after { content: '✂ Destacar aqui ✂'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 0 20px; color: #94a3b8; font-size: 10px; font-weight: 800; text-transform: uppercase; }
