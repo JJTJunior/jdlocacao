@@ -335,9 +335,16 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
     const pw = window.open('', '_blank');
     if (!pw) { alert('Por favor, permita popups para imprimir.'); return; }
 
-    // Fetch company settings and full customer data for the receipt
-    const { data: company } = await supabase.from('company_settings').select('*').eq('user_id', userId).maybeSingle();
-    const { data: customer } = await supabase.from('customers').select('*').eq('id', order.customer_id).single();
+    try {
+      console.log('Printing order:', order.id);
+      // Fetch company settings and full customer data for the receipt
+      const { data: company, error: compErr } = await supabase.from('company_settings').select('*').eq('user_id', userId).maybeSingle();
+      if (compErr) console.error('Error fetching company:', compErr);
+      
+      const { data: customer, error: custErr } = await supabase.from('customers').select('*').eq('id', order.customer_id).maybeSingle();
+      if (custErr) console.error('Error fetching customer:', custErr);
+      
+      console.log('Data fetched:', { company: !!company, customer: !!customer });
 
     const fmtDate = (s: string) => { 
       if (!s) return '-';
@@ -573,6 +580,10 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
       </html>
     `);
     pw.document.close();
+    } catch (err) {
+      console.error('Fatal error in handlePrint:', err);
+      alert('Erro ao gerar impressão. Verifique o console ou as configurações do navegador.');
+    }
   };
 
   const filtered = orders.filter(o => {
