@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Menu, Truck, LogOut, Bell, ChevronDown } from 'lucide-react';
+import { Menu, Truck, LogOut, Bell, ChevronDown, ChevronLeft } from 'lucide-react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabaseClient';
 import { AuthPage } from './components/AuthPage';
@@ -141,6 +141,15 @@ export default function App() {
         {/* Desktop TopBar */}
         <header className="hidden md:flex items-center justify-between bg-white border-b border-slate-200 px-6 py-3 z-10 shadow-sm flex-shrink-0">
           <div className="flex items-center gap-3">
+            {activeTab !== 'dashboard' && (
+              <button 
+                onClick={() => setActiveTab('dashboard')}
+                className="mr-2 p-2 hover:bg-slate-100 rounded-lg border border-slate-200 text-slate-500 transition-colors"
+                title="Voltar para o Dashboard"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            )}
             {company?.logo ? (
               <img src={company.logo} alt={company.name} className="w-10 h-10 rounded-xl object-cover bg-slate-50 border border-slate-100 p-0.5" />
             ) : (
@@ -182,6 +191,15 @@ export default function App() {
         {/* Mobile Header */}
         <header className="md:hidden bg-slate-900 text-white p-4 flex items-center justify-between z-20 shadow-md flex-shrink-0">
           <div className="flex items-center gap-3">
+            {activeTab !== 'dashboard' && (
+              <button 
+                onClick={() => setActiveTab('dashboard')}
+                className="p-2 -ml-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
+                title="Voltar"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+            )}
             {company?.logo
               ? <img src={company.logo} alt={company.name} className="w-10 h-10 rounded-xl object-cover bg-white p-0.5 shadow-sm" />
               : <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center"><Truck className="w-6 h-6 text-white" /></div>}
