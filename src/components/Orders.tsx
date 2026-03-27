@@ -187,8 +187,8 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
 
       // 1. Update order: Reset cycle to start from old end_date
       const { error: updError } = await update(renewingOrder.id, {
-        start_date: renewingOrder.end_date, // Começa a contar daquele dia pra frente
-        end_date: renewEndDate,
+        start_date: new Date().toISOString(), // Data/hora da renovação (agora)
+        end_date: toTimestamp(renewEndDate),
         total_amount: Number(renewAmount),  // Apenas o que falta pra receber
         contract_number: newContractNumber
       });
