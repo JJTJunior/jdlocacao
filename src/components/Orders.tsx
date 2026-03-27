@@ -81,7 +81,7 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
     const description = `Locação: ${order.customer_name} (Contrato: ${order.contract_number || 'S/N'})`;
     const payload = {
       user_id: userId,
-      date: order.status === 'completed' ? (order.end_date || new Date().toISOString().split('T')[0]) : order.start_date,
+      date: new Date().toISOString(),
       description,
       category: 'Aluguel',
       type: 'income',
@@ -206,7 +206,7 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
       if (oldTrans) {
         await supabase.from('transactions').update({
           status: 'paid',
-          date: renewingOrder.end_date
+          date: new Date().toISOString()
         }).eq('id', oldTrans.id);
       }
 
@@ -214,7 +214,7 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
       const description = `Locação: ${renewingOrder.customer_name} (Contrato: ${newContractNumber})`;
       const payload = {
         user_id: userId,
-        date: new Date().toISOString().split('T')[0], // date of renewal (today)
+        date: new Date().toISOString(), // date of renewal (now)
         description,
         category: 'Aluguel',
         type: 'income',

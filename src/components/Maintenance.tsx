@@ -49,7 +49,7 @@ export function Maintenance({ userId, initialSearch = '', initialTab = 'in_progr
     equipment_name: '',
     lot_number: '',
     quantity: 1,
-    start_date: new Date().toISOString().split('T')[0],
+    start_date: new Date().toISOString(),
     end_date: '',
     reason: '',
     cost: '0',
@@ -106,7 +106,7 @@ export function Maintenance({ userId, initialSearch = '', initialTab = 'in_progr
       lot_number: m.lot_number || '',
       quantity: m.quantity || 1,
       start_date: m.start_date,
-      end_date: m.end_date || new Date().toISOString().split('T')[0],
+      end_date: m.end_date || new Date().toISOString(),
       reason: m.reason,
       cost: m.cost.toString(),
       status: 'completed'

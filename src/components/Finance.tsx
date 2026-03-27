@@ -137,7 +137,25 @@ export function Finance({ userId }: FinanceProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    const payload = { date: formData.date, description: formData.description, category: formData.category, type: modalType, amount: Number(formData.amount), status: formData.status };
+    
+    // If it's a new entry and the date is today, use full current timestamp
+    let finalDate = formData.date;
+    const today = new Date().toISOString().split('T')[0];
+    if (!editingId && formData.date === today) {
+      finalDate = new Date().toISOString();
+    } else if (formData.date.length === 10) {
+      // Fallback for YYYY-MM-DD to include a mid-day time to avoid timezone shifts
+      finalDate = `${formData.date}T12:00:00Z`;
+    }
+
+    const payload = { 
+      date: finalDate, 
+      description: formData.description, 
+      category: formData.category, 
+      type: modalType, 
+      amount: Number(formData.amount), 
+      status: formData.status 
+    };
     if (editingId) { await update(editingId, payload); }
     else { await insert(payload as any); }
     setSaving(false);
@@ -169,14 +187,17 @@ export function Finance({ userId }: FinanceProps) {
       .filter(t => categoryFilter === 'all' || t.category === categoryFilter)
       .filter(t => monthFilter === 'all' || t.date.startsWith(monthFilter))
       .sort((a, b) => b.date.localeCompare(a.date))
-      .map(t => ({
-        Data: new Date(t.date + 'T12:00:00').toLocaleDateString('pt-BR'),
+      .map(t => {
+        const dateObj = new Date(t.date);
+        return {
+          Data: dateObj.toLocaleDateString('pt-BR') + (t.date.includes('T') && !t.date.endsWith('00:00:00Z') ? ' ' + dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''),
         Categoria: t.category,
         Descrição: t.description,
         Tipo: t.type === 'income' ? 'Receita' : 'Despesa',
         'Valor (R$)': t.amount,
         Status: t.status === 'paid' ? 'Pago' : 'Pendente'
-      }));
+      };
+    });
 
     if (dataToExport.length === 0) {
       alert('Nenhuma transação para exportar.');
@@ -328,13 +349,30 @@ export function Finance({ userId }: FinanceProps) {
                 .filter(t => categoryFilter === 'all' || t.category === categoryFilter)
                 .filter(t => monthFilter === 'all' || t.date.startsWith(monthFilter))
                 .sort((a, b) => b.date.localeCompare(a.date))
-                .map(t => (
+                .map(t => {
+                  const dateObj = new Date(t.date);
+                  const hasTime = t.date.includes('T') && !t.date.endsWith('T00:00:00Z') && !t.date.endsWith('T12:00:00Z');
+                  const formattedDate = dateObj.toLocaleDateString('pt-BR', { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric',
+                    ...(hasTime ? { hour: '2-digit', minute: '2-digit' } : {})
+                  });
+
+                  return (
                   <div key={t.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between">
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
-                        <span className="text-[11px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-                          {new Date(t.date + 'T12:00:00').toLocaleDateString('pt-BR')}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                            {formattedDate}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-tighter ${
+                            t.status === 'paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-orange-50 text-orange-600 border-orange-100'
+                          }`}>
+                            {t.status === 'paid' ? 'Pago' : 'Pendente'}
+                          </span>
+                        </div>
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-tighter ${
                           t.type === 'income' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'
                         }`}>
