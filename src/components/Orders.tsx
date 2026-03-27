@@ -89,12 +89,12 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
       status: order.status === 'completed' ? 'paid' : 'pending'
     };
 
-    // Try to find existing transaction for this contract
+    // Try to find existing transaction for this specific contract and customer
     const { data: existing } = await supabase
       .from('transactions')
       .select('id')
       .eq('user_id', userId)
-      .ilike('description', `Locação:%${order.contract_number}%`)
+      .eq('description', description)
       .maybeSingle();
 
     let error;

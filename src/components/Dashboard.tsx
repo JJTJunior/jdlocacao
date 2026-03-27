@@ -78,7 +78,7 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
       // Legacy fallback: orders that are completed but don't have a tracking transaction
       const legacyOrders = ordList.filter(o => 
         o.status === 'completed' && 
-        !trList.some(t => t.category === 'Aluguel' && t.description.includes(o.contract_number || ''))
+        !trList.some(t => t.category === 'Aluguel' && t.description.includes(`(Contrato: ${o.contract_number || 'S/N'})`))
       );
 
       // Concluded Transactions for Current Metrics (Only status === 'paid' + legacy)

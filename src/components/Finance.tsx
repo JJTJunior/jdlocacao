@@ -150,7 +150,7 @@ export function Finance({ userId }: FinanceProps) {
 
   const legacyOrders = orders.filter(o => 
     o.status === 'completed' && 
-    !transactions.some(t => t.category === 'Aluguel' && t.description.includes(o.contract_number || ''))
+    !transactions.some(t => t.category === 'Aluguel' && t.description.includes(`(Contrato: ${o.contract_number || 'S/N'})`))
   );
 
   const monthIncome = transactions
