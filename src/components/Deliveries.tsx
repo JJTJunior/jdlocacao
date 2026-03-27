@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Search, Truck, ArrowLeftRight, MapPin, Edit, Trash2, Loader2 } from 'lucide-react';
 import { Modal } from './Modal';
 import { useSupabaseTable } from '../lib/useSupabaseTable';
+import { formatSafeDate } from '../lib/dateUtils';
 
 interface Delivery {
   id: string;
@@ -107,7 +108,7 @@ export function Deliveries({ userId }: DeliveriesProps) {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap"><div className="font-medium text-indigo-600">{d.order_id}</div><div className="text-sm text-slate-600">{d.customer_name}</div></td>
                   <td className="px-6 py-4"><div className="flex items-start gap-2 text-sm text-slate-600 max-w-xs"><MapPin className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" /><span className="truncate">{d.address}</span></div></td>
-                  <td className="px-6 py-4 whitespace-nowrap text-slate-700">{new Date(d.date).toLocaleDateString('pt-BR')}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-slate-700">{formatSafeDate(d.date)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(d.status)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">

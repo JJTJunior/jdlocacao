@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, TrendingUp, TrendingDown, DollarSign, Trash2, Save, Loader2, Search, ChevronDown, Check, Filter, Download } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import * as XLSX from 'xlsx';
+import { formatSafeDate, formatSafeDateTime } from '../lib/dateUtils';
 import { Modal } from './Modal';
 import { useSupabaseTable } from '../lib/useSupabaseTable';
 import { supabase } from '../lib/supabaseClient';
@@ -188,9 +189,8 @@ export function Finance({ userId }: FinanceProps) {
       .filter(t => monthFilter === 'all' || t.date.startsWith(monthFilter))
       .sort((a, b) => b.date.localeCompare(a.date))
       .map(t => {
-        const dateObj = new Date(t.date);
         return {
-          Data: dateObj.toLocaleDateString('pt-BR') + (t.date.includes('T') && !t.date.endsWith('00:00:00Z') ? ' ' + dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''),
+          Data: formatSafeDateTime(t.date),
         Categoria: t.category,
         Descrição: t.description,
         Tipo: t.type === 'income' ? 'Receita' : 'Despesa',
@@ -350,22 +350,13 @@ export function Finance({ userId }: FinanceProps) {
                 .filter(t => monthFilter === 'all' || t.date.startsWith(monthFilter))
                 .sort((a, b) => b.date.localeCompare(a.date))
                 .map(t => {
-                  const dateObj = new Date(t.date);
-                  const hasTime = t.date.includes('T') && !t.date.endsWith('T00:00:00Z') && !t.date.endsWith('T12:00:00Z');
-                  const formattedDate = dateObj.toLocaleDateString('pt-BR', { 
-                    day: '2-digit', 
-                    month: '2-digit', 
-                    year: 'numeric',
-                    ...(hasTime ? { hour: '2-digit', minute: '2-digit' } : {})
-                  });
-
                   return (
                   <div key={t.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between">
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-2">
                           <span className="text-[11px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-                            {formattedDate}
+                            {formatSafeDateTime(t.date)}
                           </span>
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-tighter ${
                             t.status === 'paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-orange-50 text-orange-600 border-orange-100'
@@ -418,9 +409,8 @@ export function Finance({ userId }: FinanceProps) {
                         </span>
                       )}
                     </div>
-                  </div>
-                ))
-              }
+                  );
+                })}
             </div>
           </>
         )}
