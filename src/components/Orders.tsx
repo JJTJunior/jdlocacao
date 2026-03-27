@@ -918,7 +918,7 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
                               await updateEquipmentStock(item.equipmentId, item.quantity, 1, -1, item.lotNumber);
                             }
                             // Register revenue
-                            await registerRevenue(order);
+                            await registerRevenue({ ...order, status: 'completed' });
                           }
                       }}
                       disabled={order.status === 'completed'}
