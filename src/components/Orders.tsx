@@ -3,7 +3,7 @@ import { Plus, Search, Filter, Eye, Printer, Edit, Trash2, X, Loader2, Calendar,
 import { Modal } from './Modal';
 import { useSupabaseTable } from '../lib/useSupabaseTable';
 import { supabase } from '../lib/supabaseClient';
-import { formatSafeDate } from '../lib/dateUtils';
+import { formatSafeDateTime } from '../lib/dateUtils';
 
 interface OrderItem { equipmentId: string; equipmentName: string; quantity: number; price?: number; lotNumber?: string; }
 interface EquipmentRow { id: string; name: string; price_per_week: number; price_per_day: number; price_per_month: number; stock_available: number; stock_rented: number; lots?: { lot_number: string; quantity: number }[]; }
@@ -877,8 +877,8 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
                   </div>
 
                   <div className="flex flex-wrap items-center gap-4 pt-2 text-[11px] text-slate-500 font-medium">
-                    <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-indigo-400" /> Saída: {formatSafeDate(order.start_date)}</span>
-                    <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-blue-400" /> Devolução: {order.end_date ? formatSafeDate(order.end_date) : '-'}</span>
+                    <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-indigo-400" /> Saída: {formatSafeDateTime(order.start_date)}</span>
+                    <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-blue-400" /> Devolução: {order.end_date ? formatSafeDateTime(order.end_date) : '-'}</span>
                     <span className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-50 rounded-md border border-slate-100 italic capitalize">
                       <DollarSign className="w-3 h-3" /> {order.payment_method || 'dinheiro'}
                     </span>
@@ -1241,7 +1241,7 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
         <form onSubmit={handleRenewSubmit} className="space-y-4">
           <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 mb-4">
             <p className="text-emerald-800 text-sm font-bold">Cliente: {renewingOrder?.customer_name}</p>
-            <p className="text-emerald-600/80 text-xs">Vencimento atual: {renewingOrder ? formatSafeDate(renewingOrder.end_date) : ''}</p>
+            <p className="text-emerald-600/80 text-xs">Vencimento atual: {renewingOrder ? formatSafeDateTime(renewingOrder.end_date) : ''}</p>
           </div>
 
           <div className="space-y-1.5">

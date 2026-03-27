@@ -3,7 +3,7 @@ import { Wrench, Plus, Search, Filter, Trash2, Edit, Save, Loader2, CheckCircle 
 import { Modal } from './Modal';
 import { useSupabaseTable } from '../lib/useSupabaseTable';
 import { supabase } from '../lib/supabaseClient';
-import { formatSafeDate } from '../lib/dateUtils';
+import { formatSafeDateTime } from '../lib/dateUtils';
 
 interface EquipmentRow {
   id: string;
@@ -316,11 +316,11 @@ export function Maintenance({ userId, initialSearch = '', initialTab = 'in_progr
                   <div className="flex flex-wrap items-center gap-4 pt-1 text-[11px] text-slate-500 font-medium">
                     <span className="flex items-center gap-1.5">
                       <Save className="w-3.5 h-3.5 text-orange-400" /> 
-                      Entrada: {formatSafeDate(m.start_date)}
+                      Entrada: {formatSafeDateTime(m.start_date)}
                     </span>
                     <span className="flex items-center gap-1.5">
                       <CheckCircle className="w-3.5 h-3.5 text-blue-400" /> 
-                      {m.status === 'in_progress' ? 'Previsão:' : 'Conclusão:'} {m.end_date ? formatSafeDate(m.end_date) : '-'}
+                      {m.status === 'in_progress' ? 'Previsão:' : 'Conclusão:'} {m.end_date ? formatSafeDateTime(m.end_date) : '-'}
                     </span>
                   </div>
                 </div>
