@@ -3,7 +3,7 @@ import { Wrench, Plus, Search, Filter, Trash2, Edit, Save, Loader2, CheckCircle 
 import { Modal } from './Modal';
 import { useSupabaseTable } from '../lib/useSupabaseTable';
 import { supabase } from '../lib/supabaseClient';
-import { formatSafeDateTime } from '../lib/dateUtils';
+import { formatSafeDateTime, toTimestamp } from '../lib/dateUtils';
 
 interface EquipmentRow {
   id: string;
@@ -144,8 +144,8 @@ export function Maintenance({ userId, initialSearch = '', initialTab = 'in_progr
       equipment_name: eqName,
       lot_number: formData.lot_number,
       quantity: formData.quantity,
-      start_date: formData.start_date,
-      end_date: formData.end_date || null,
+      start_date: toTimestamp(formData.start_date),
+      end_date: formData.end_date ? toTimestamp(formData.end_date) : null,
       reason: formData.reason,
       cost: Number(formData.cost) || 0,
       status: formData.status

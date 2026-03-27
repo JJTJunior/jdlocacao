@@ -3,7 +3,7 @@ import { Plus, Search, Filter, Eye, Printer, Edit, Trash2, X, Loader2, Calendar,
 import { Modal } from './Modal';
 import { useSupabaseTable } from '../lib/useSupabaseTable';
 import { supabase } from '../lib/supabaseClient';
-import { formatSafeDateTime } from '../lib/dateUtils';
+import { formatSafeDateTime, toTimestamp } from '../lib/dateUtils';
 
 interface OrderItem { equipmentId: string; equipmentName: string; quantity: number; price?: number; lotNumber?: string; }
 interface EquipmentRow { id: string; name: string; price_per_week: number; price_per_day: number; price_per_month: number; stock_available: number; stock_rented: number; lots?: { lot_number: string; quantity: number }[]; }
@@ -434,8 +434,8 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
       contract_number: finalContract,
       payment_method: formData.payment_method,
       observations: formData.observations,
-      start_date: formData.start_date, 
-      end_date: formData.end_date,
+      start_date: toTimestamp(formData.start_date), 
+      end_date: toTimestamp(formData.end_date),
       total_amount: formData.total_amount, 
       status: formData.status,
       items: formData.items.map(({ equipmentId, equipmentName, quantity, price, lotNumber }) => ({ equipmentId, equipmentName, quantity, price, lotNumber }))
