@@ -86,7 +86,7 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
       category: 'Aluguel',
       type: 'income',
       amount: Number(order.total_amount),
-      status: 'paid'
+      status: order.status === 'completed' ? 'paid' : 'pending'
     };
 
     // Try to find existing transaction for this contract
@@ -194,7 +194,23 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
 
       if (updError) throw updError;
 
-      // 2. Register new transaction for the renewal
+      // 2. Finalize previous cycle transaction (mark as paid and set date to cycle end)
+      const oldDescription = `Locação: ${renewingOrder.customer_name} (Contrato: ${renewingOrder.contract_number})`;
+      const { data: oldTrans } = await supabase
+        .from('transactions')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('description', oldDescription)
+        .maybeSingle();
+
+      if (oldTrans) {
+        await supabase.from('transactions').update({
+          status: 'paid',
+          date: renewingOrder.end_date
+        }).eq('id', oldTrans.id);
+      }
+
+      // 3. Register new transaction for the renewal
       const description = `Locação: ${renewingOrder.customer_name} (Contrato: ${newContractNumber})`;
       const payload = {
         user_id: userId,
