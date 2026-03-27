@@ -409,6 +409,7 @@ export function Finance({ userId }: FinanceProps) {
                         </span>
                       )}
                     </div>
+                  </div>
                   );
                 })}
             </div>
