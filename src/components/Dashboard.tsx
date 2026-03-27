@@ -72,39 +72,41 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
 
       // Calculate stats
       const totalEquipments = eqList.reduce((sum, eq) => sum + ((eq.stock_available || 0) + (eq.stock_rented || 0) + (eq.stock_maintenance || 0)), 0);
-      const totalRented = eqList.reduce((sum, eq) => sum + (eq.stock_rented || 0), 0);
+      const totalRented = ordList.filter(o => o.status === 'rented').length;
       const totalMaintenance = maintList.filter((m: any) => m.status === 'in_progress').reduce((sum: number, m: any) => sum + (m.quantity || 0), 0);
 
-      // Concluded Transactions for Current Metrics
-      const completedOrdersRev = ordList
-        .filter(o => o.status === 'completed' && o.end_date && o.end_date.startsWith(currentMonth))
+      // Legacy fallback: orders that are completed but don't have a tracking transaction
+      const legacyOrders = ordList.filter(o => 
+        o.status === 'completed' && 
+        !trList.some(t => t.category === 'Aluguel' && t.description.includes(o.contract_number || ''))
+      );
+
+      // Concluded Transactions for Current Metrics (Only status === 'paid' + legacy)
+      const monthRev = trList
+        .filter(t => t.type === 'income' && t.status === 'paid' && t.date && t.date.startsWith(currentMonth))
+        .reduce((sum, t) => sum + Number(t.amount), 0) +
+        legacyOrders.filter(o => o.end_date && o.end_date.startsWith(currentMonth))
         .reduce((sum, o) => sum + Number(o.total_amount), 0);
-      
-      const otherIncomeRev = trList
-        .filter(t => t.type === 'income' && t.category !== 'Aluguel' && t.date && t.date.startsWith(currentMonth))
-        .reduce((sum, t) => sum + Number(t.amount), 0);
-      
-      const monthRev = completedOrdersRev + otherIncomeRev;
       
       const monthExp = [
         ...trList.filter(t => t.type === 'expense' && t.status === 'paid' && t.date && t.date.startsWith(currentMonth)),
         ...maintList.filter((m: any) => m.status === 'completed' && m.cost > 0 && (m.end_date || m.start_date).startsWith(currentMonth))
       ].reduce((sum, item) => sum + Number(item.amount || item.cost), 0);
       
-      // Next Month Forecast: Active rentals returning next month + Any scheduled income transactions
+      // Next Month Forecast: Anything scheduled + rented orders returning next month
       const nextMonthRentalsRev = ordList
         .filter(o => o.status === 'rented' && o.end_date && o.end_date.startsWith(nextMonthStr))
         .reduce((sum, o) => sum + Number(o.total_amount), 0);
-      const nextMonthScheduledRev = combinedTrans
+      const nextMonthScheduledRev = trList
         .filter(t => t.type === 'income' && t.date && t.date.startsWith(nextMonthStr))
         .reduce((sum, t) => sum + Number(t.amount), 0);
-      
       const nextMonthRev = nextMonthRentalsRev + nextMonthScheduledRev;
       
-      const yearInc = [
-        ...trList.filter(t => t.type === 'income' && t.category !== 'Aluguel' && t.date && t.date.startsWith(currentYear)),
-        ...ordList.filter(o => o.status === 'completed' && o.end_date && o.end_date.startsWith(currentYear)).map(o => ({ amount: o.total_amount }))
-      ].reduce((sum, t) => sum + Number(t.amount), 0);
+      const yearInc = trList
+        .filter(t => t.type === 'income' && t.status === 'paid' && t.date && t.date.startsWith(currentYear))
+        .reduce((sum, t) => sum + Number(t.amount), 0) + 
+        legacyOrders.filter(o => o.end_date && o.end_date.startsWith(currentYear))
+        .reduce((sum, o) => sum + Number(o.total_amount), 0);
 
       const yearExp = [
         ...trList.filter(t => t.type === 'expense' && t.status === 'paid' && t.date && t.date.startsWith(currentYear)),
@@ -117,10 +119,11 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         const name = `${d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '').slice(0, 3)}/${String(d.getFullYear()).slice(-2)}`;
         
-        const income = [
-          ...trList.filter(t => t.type === 'income' && t.category !== 'Aluguel' && t.date && t.date.startsWith(key)),
-          ...ordList.filter(o => o.status === 'completed' && o.end_date && o.end_date.startsWith(key)).map(o => ({ amount: o.total_amount }))
-        ].reduce((s, t) => s + Number(t.amount), 0);
+        const income = trList
+          .filter(t => t.type === 'income' && t.status === 'paid' && t.date && t.date.startsWith(key))
+          .reduce((s, t) => s + Number(t.amount), 0) + 
+          legacyOrders.filter(o => o.end_date && o.end_date.startsWith(key))
+          .reduce((s, o) => s + Number(o.total_amount), 0);
 
         const expense = [
           ...trList.filter(t => t.type === 'expense' && t.status === 'paid' && t.date && t.date.startsWith(key)),
@@ -502,13 +505,13 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
               <p className="text-xs text-slate-400 mb-3">{item.category}</p>
               <div className="flex gap-2">
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-600 border border-emerald-100">
-                  {item.disp} disp.
+                  {Math.max(0, item.disp)} disp.
                 </span>
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-600 border border-blue-100">
-                  {item.alug} alug.
+                  {Math.max(0, item.alug)} alug.
                 </span>
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-600 border border-amber-100">
-                  {item.maint} manut.
+                  {Math.max(0, item.maint)} manut.
                 </span>
               </div>
             </div>

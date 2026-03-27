@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Search, Edit, Trash2, Mail, Phone, Loader2 } from 'lucide-react';
 import { Modal } from './Modal';
 import { useSupabaseTable } from '../lib/useSupabaseTable';
+import { supabase } from '../lib/supabaseClient';
 
 interface Customer {
   id: string;
@@ -60,13 +61,64 @@ export function Customers({ userId, initialSearch = '' }: CustomersProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    if (editingId) {
-      await update(editingId, formData);
-    } else {
-      await insert(formData as any);
+    
+    try {
+      if (!userId) {
+        alert("Erro: Usuário não autenticado.");
+        setSaving(false);
+        return;
+      }
+
+      const isDocumentFilled = formData.document && formData.document.trim() !== '';
+      const isPhoneFilled = formData.phone && formData.phone.trim() !== '';
+
+      let query = supabase.from('customers').select('id, document, phone').eq('user_id', userId);
+      
+      if (editingId) {
+        query = query.neq('id', editingId);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error("Erro ao buscar clientes:", error);
+        alert("Ocorreu um erro ao verificar os dados do cliente.");
+        setSaving(false);
+        return;
+      }
+      
+      if (data) {
+        if (isDocumentFilled) {
+          const duplicateCpf = data.find(c => c.document === formData.document);
+          if (duplicateCpf) {
+            alert('Já existe um cliente cadastrado com este Documento/CPF.');
+            setSaving(false);
+            return;
+          }
+        }
+        
+        if (isPhoneFilled) {
+          const duplicatePhone = data.find(c => c.phone === formData.phone);
+          if (duplicatePhone) {
+            alert('Já existe um cliente cadastrado com este Telefone.');
+            setSaving(false);
+            return;
+          }
+        }
+      }
+
+      if (editingId) {
+        await update(editingId, formData);
+      } else {
+        await insert(formData as any);
+      }
+      closeModal();
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao processar as informações.');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    closeModal();
   };
 
   const filtered = customers

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Search, Edit, Trash2, Loader2 } from 'lucide-react';
 import { Modal } from './Modal';
 import { useSupabaseTable } from '../lib/useSupabaseTable';
+import { supabase } from '../lib/supabaseClient';
 
 interface Equipment {
   id: string;
@@ -71,22 +72,60 @@ export function Equipments({ userId, initialSearch = '' }: EquipmentsProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    const totalFromLots = formData.lots.reduce((acc, lot) => acc + (lot.quantity || 0), 0);
+    
+    try {
+      if (!userId) {
+        alert("Erro: Usuário não autenticado.");
+        setSaving(false);
+        return;
+      }
+      
+      const isCodeFilled = formData.code && formData.code.trim() !== '';
+      if (isCodeFilled) {
+        let query = supabase.from('equipments').select('id, code').eq('user_id', userId).eq('code', formData.code);
+        
+        if (editingId) {
+          query = query.neq('id', editingId);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) {
+          console.error("Erro ao buscar equipamentos:", error);
+          alert("Ocorreu um erro ao verificar os dados do equipamento.");
+          setSaving(false);
+          return;
+        }
 
-    const payload = {
-      name: formData.name, code: formData.code, category: formData.category,
-      price_per_day: parseFloat(formData.price_per_day) || 0,
-      price_per_week: parseFloat(formData.price_per_week) || 0,
-      price_per_month: parseFloat(formData.price_per_month) || 0,
-      stock_available: formData.lots.length > 0 ? totalFromLots : (parseInt(formData.stock_available) || 0),
-      stock_rented: parseInt(formData.stock_rented) || 0,
-      stock_maintenance: parseInt(formData.stock_maintenance) || 0,
-      lots: formData.lots
-    };
-    if (editingId) { await update(editingId, payload); }
-    else { await insert(payload as any); }
-    setSaving(false);
-    closeModal();
+        if (data && data.length > 0) {
+          alert('Já existe um equipamento cadastrado com este Código.');
+          setSaving(false);
+          return;
+        }
+      }
+
+      const totalFromLots = formData.lots.reduce((acc, lot) => acc + (lot.quantity || 0), 0);
+
+      const payload = {
+        name: formData.name, code: formData.code, category: formData.category,
+        price_per_day: parseFloat(formData.price_per_day) || 0,
+        price_per_week: parseFloat(formData.price_per_week) || 0,
+        price_per_month: parseFloat(formData.price_per_month) || 0,
+        stock_available: formData.lots.length > 0 ? totalFromLots : (parseInt(formData.stock_available) || 0),
+        stock_rented: parseInt(formData.stock_rented) || 0,
+        stock_maintenance: parseInt(formData.stock_maintenance) || 0,
+        lots: formData.lots
+      };
+      
+      if (editingId) { await update(editingId, payload); }
+      else { await insert(payload as any); }
+      closeModal();
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao processar as informações.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const addLot = () => {

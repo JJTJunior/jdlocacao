@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, Search, Filter, Eye, Printer, Edit, Trash2, X, Loader2, Calendar, DollarSign, User, Clock, FileText, CheckCircle2, ChevronDown, Phone, Save } from 'lucide-react';
+import { Plus, Search, Filter, Eye, Printer, Edit, Trash2, X, Loader2, Calendar, DollarSign, User, Clock, FileText, CheckCircle2, ChevronDown, Phone, Save, RefreshCw } from 'lucide-react';
 import { Modal } from './Modal';
 import { useSupabaseTable } from '../lib/useSupabaseTable';
 import { supabase } from '../lib/supabaseClient';
@@ -49,6 +49,12 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Renew States
+  const [renewingOrder, setRenewingOrder] = useState<OrderRow | null>(null);
+  const [renewEndDate, setRenewEndDate] = useState<string>('');
+  const [renewAmount, setRenewAmount] = useState<number>(0);
+  const [renewSaving, setRenewSaving] = useState<boolean>(false);
+
   // Modal States
   const [customerSearchTab, setCustomerSearchTab] = useState<'name' | 'phone' | 'document'>('name');
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
@@ -88,7 +94,7 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
       .from('transactions')
       .select('id')
       .eq('user_id', userId)
-      .ilike('description', `%${order.contract_number}%`)
+      .ilike('description', `Locação:%${order.contract_number}%`)
       .maybeSingle();
 
     let error;
@@ -141,12 +147,15 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
           }
         }
         
-        // Remove associated transactions from finance (search by contract number in description)
+        // Remove associated transactions from finance (search by BASE contract number in description)
         if (order.contract_number) {
+          const baseMatch = order.contract_number.match(/(.*)-R\d+$/);
+          const baseContractNumber = baseMatch ? baseMatch[1] : order.contract_number;
+
           const { data: transToDelete } = await supabase
             .from('transactions')
             .select('id')
-            .ilike('description', `%${order.contract_number}%`);
+            .ilike('description', `%${baseContractNumber}%`);
             
           if (transToDelete && transToDelete.length > 0) {
             for (const t of transToDelete) {
@@ -157,6 +166,57 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
       }
       await remove(orderToDelete); 
       setOrderToDelete(null); 
+    }
+  };
+
+  const handleRenewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!renewingOrder || !renewEndDate) return;
+    setRenewSaving(true);
+
+    try {
+      // Cycle the contract number to prevent Finance overwrites and keep history clean
+      const baseMatch = renewingOrder.contract_number?.match(/(.*)-R(\d+)$/);
+      let newContractNumber = renewingOrder.contract_number;
+      if (baseMatch) {
+        newContractNumber = `${baseMatch[1]}-R${Number(baseMatch[2]) + 1}`;
+      } else {
+        newContractNumber = `${renewingOrder.contract_number || `LOC-${Math.floor(Math.random() * 1000000)}`}-R1`;
+      }
+
+      // 1. Update order: Reset cycle to start from old end_date
+      const { error: updError } = await update(renewingOrder.id, {
+        start_date: renewingOrder.end_date, // Começa a contar daquele dia pra frente
+        end_date: renewEndDate,
+        total_amount: Number(renewAmount),  // Apenas o que falta pra receber
+        contract_number: newContractNumber
+      });
+
+      if (updError) throw updError;
+
+      // 2. Register new transaction for the renewal
+      const description = `Locação: ${renewingOrder.customer_name} (Contrato: ${newContractNumber})`;
+      const payload = {
+        user_id: userId,
+        date: new Date().toISOString().split('T')[0], // date of renewal (today)
+        description,
+        category: 'Aluguel',
+        type: 'income',
+        amount: Number(renewAmount),
+        status: 'pending' // Aguardando recebimento
+      };
+
+      const { error: insError } = await supabase.from('transactions').insert(payload);
+      if (insError) throw insError;
+
+      setRenewingOrder(null);
+      setRenewEndDate('');
+      setRenewAmount(0);
+    } catch (err: any) {
+      console.error('Error renewing order:', err);
+      alert(`Erro ao renovar aluguel: ${err.message}`);
+    } finally {
+      setRenewSaving(false);
     }
   };
 
@@ -287,6 +347,29 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
     
     // Generate contract number if missing
     const finalContract = formData.contract_number || `LOC-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    // Validation: Check if customer already has an active order
+    if (!editingId) {
+      const { data: activeOrders, error: activeOrdersErr } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('customer_id', formData.customer_id)
+        .in('status', ['rented', 'pending']);
+        
+      if (activeOrdersErr) {
+        console.error("Erro ao verificar histórico do cliente:", activeOrdersErr);
+        alert("Ocorreu um erro ao verificar o histórico do cliente.");
+        setSaving(false);
+        return;
+      }
+
+      if (activeOrders && activeOrders.length > 0) {
+        alert('Este cliente já possui um aluguel ativo/pendente. Não é possível criar um novo até que o anterior seja concluído.');
+        setSaving(false);
+        return;
+      }
+    }
     
     // Validation: Check stock availability
     if (formData.status === 'rented') {
@@ -798,6 +881,18 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
                     <button onClick={() => handlePrint(order)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-100" title="Imprimir">
                       <Printer className="w-4 h-4" />
                     </button>
+                    {order.status === 'rented' && (
+                      <button 
+                        onClick={() => {
+                           setRenewingOrder(order);
+                           setRenewEndDate(''); 
+                           setRenewAmount(0);
+                        }}
+                        className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-100" title="Renovar"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                      </button>
+                    )}
                     <button 
                       onClick={async () => {
                           if (order.status !== 'completed') {
@@ -1122,6 +1217,37 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
             <button onClick={handleDeleteConfirm} className="px-6 py-2.5 bg-red-500 text-white font-bold text-sm rounded-xl hover:bg-red-600 transition-all shadow-md shadow-red-100">Excluir Agora</button>
           </div>
         </div>
+      </Modal>
+
+      {/* Modal de Renovação */}
+      <Modal isOpen={!!renewingOrder} onClose={() => setRenewingOrder(null)} title="Renovar Aluguel">
+        <form onSubmit={handleRenewSubmit} className="space-y-4">
+          <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 mb-4">
+            <p className="text-emerald-800 text-sm font-bold">Cliente: {renewingOrder?.customer_name}</p>
+            <p className="text-emerald-600/80 text-xs">Vencimento atual: {renewingOrder ? new Date(renewingOrder.end_date + 'T12:00:00').toLocaleDateString('pt-BR') : ''}</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Nova Data de Devolução *</label>
+            <div className="relative">
+              <Calendar className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input required type="date" className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 appearance-none transition-all" value={renewEndDate} onChange={e => setRenewEndDate(e.target.value)} min={renewingOrder?.end_date} />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Valor da Renovação (R$) *</label>
+            <input required type="number" step="0.01" min="0" className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 transition-all font-bold" value={renewAmount} onChange={e => setRenewAmount(parseFloat(e.target.value) || 0)} />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <button type="button" onClick={() => setRenewingOrder(null)} className="px-5 py-2.5 text-slate-500 font-bold text-sm hover:bg-slate-50 rounded-xl transition-all">Cancelar</button>
+            <button type="submit" disabled={renewSaving} className="px-5 py-2.5 bg-emerald-500 text-white font-bold text-sm rounded-xl hover:bg-emerald-600 transition-all shadow-md shadow-emerald-100 flex items-center justify-center gap-2">
+              {renewSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              Confirmar Renovação
+            </button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, TrendingUp, TrendingDown, DollarSign, Trash2, Save, Loader2, Search, ChevronDown, Check, Filter } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, DollarSign, Trash2, Save, Loader2, Search, ChevronDown, Check, Filter, Download } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import * as XLSX from 'xlsx';
 import { Modal } from './Modal';
 import { useSupabaseTable } from '../lib/useSupabaseTable';
 import { supabase } from '../lib/supabaseClient';
@@ -85,12 +86,6 @@ export function Finance({ userId }: FinanceProps) {
       date: m.end_date || m.start_date,
       type: 'expense' as const,
       amount: m.cost
-    })),
-    ...orders.filter(o => o.status === 'completed').map(o => ({
-      id: `order_${o.id}`,
-      date: o.end_date,
-      type: 'income' as const,
-      amount: o.total_amount
     }))
   ];
 
@@ -153,20 +148,70 @@ export function Finance({ userId }: FinanceProps) {
 
   const fmt = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const monthIncome = [
-    ...transactions.filter(t => t.type === 'income' && t.category !== 'Aluguel' && t.date.startsWith(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2,'0')}`)),
-    ...orders.filter(o => o.status === 'completed' && o.end_date && o.end_date.startsWith(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2,'0')}`))
-  ].reduce((s, item) => s + Number('amount' in item ? item.amount : item.total_amount), 0);
+  const legacyOrders = orders.filter(o => 
+    o.status === 'completed' && 
+    !transactions.some(t => t.category === 'Aluguel' && t.description.includes(o.contract_number || ''))
+  );
+
+  const monthIncome = transactions
+    .filter(t => t.status === 'paid' && t.type === 'income' && t.date.startsWith(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2,'0')}`))
+    .reduce((s, item) => s + Number(item.amount), 0) +
+    legacyOrders.filter(o => o.end_date && o.end_date.startsWith(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2,'0')}`))
+    .reduce((s, o) => s + Number(o.total_amount), 0);
 
   const monthExpense = [
     ...transactions.filter(t => t.type === 'expense' && t.status === 'paid' && t.date.startsWith(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2,'0')}`)),
     ...maintenances.filter(m => m.status === 'completed' && m.cost > 0 && (m.end_date || m.start_date).startsWith(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2,'0')}`))
   ].reduce((s, item) => s + Number('amount' in item ? item.amount : item.cost), 0);
 
-  const yearIncome = [
-    ...transactions.filter(t => t.type === 'income' && t.category !== 'Aluguel' && t.date.startsWith(`${now.getFullYear()}`)),
-    ...orders.filter(o => o.status === 'completed' && o.end_date && o.end_date.startsWith(`${now.getFullYear()}`))
-  ].reduce((s, item) => s + Number('amount' in item ? item.amount : item.total_amount), 0);
+  const handleExportExcel = () => {
+    const dataToExport = combinedTransactions
+      .filter(t => categoryFilter === 'all' || t.category === categoryFilter)
+      .filter(t => monthFilter === 'all' || t.date.startsWith(monthFilter))
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .map(t => ({
+        Data: new Date(t.date + 'T12:00:00').toLocaleDateString('pt-BR'),
+        Categoria: t.category,
+        Descrição: t.description,
+        Tipo: t.type === 'income' ? 'Receita' : 'Despesa',
+        'Valor (R$)': t.amount,
+        Status: t.status === 'paid' ? 'Pago' : 'Pendente'
+      }));
+
+    if (dataToExport.length === 0) {
+      alert('Nenhuma transação para exportar.');
+      return;
+    }
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    
+    const wscols = [
+      { wch: 12 },
+      { wch: 20 },
+      { wch: 40 },
+      { wch: 10 },
+      { wch: 15 },
+      { wch: 10 },
+    ];
+    ws['!cols'] = wscols;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Transações');
+    
+    let filename = 'relatorio_financeiro';
+    if (monthFilter !== 'all') {
+      filename += `_${monthFilter}`;
+    }
+    filename += '.xlsx';
+
+    XLSX.writeFile(wb, filename);
+  };
+
+  const yearIncome = transactions
+    .filter(t => t.status === 'paid' && t.type === 'income' && t.date.startsWith(`${now.getFullYear()}`))
+    .reduce((s, item) => s + Number(item.amount), 0) + 
+    legacyOrders.filter(o => o.end_date && o.end_date.startsWith(`${now.getFullYear()}`))
+    .reduce((s, o) => s + Number(o.total_amount), 0);
 
   const yearExpense = [
     ...transactions.filter(t => t.type === 'expense' && t.status === 'paid' && t.date.startsWith(`${now.getFullYear()}`)),
@@ -178,10 +223,11 @@ export function Finance({ userId }: FinanceProps) {
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`;
     const name = `${d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.','').slice(0,3)}/${String(d.getFullYear()).slice(-2)}`;
     
-    const income = [
-      ...transactions.filter(t => t.type === 'income' && t.category !== 'Aluguel' && t.date.startsWith(key)),
-      ...orders.filter(o => o.status === 'completed' && o.end_date && o.end_date.startsWith(key))
-    ].reduce((s, item) => s + Number('amount' in item ? item.amount : item.total_amount), 0);
+    const income = transactions
+      .filter(t => t.status === 'paid' && t.type === 'income' && t.date.startsWith(key))
+      .reduce((s, item) => s + Number(item.amount), 0) + 
+      legacyOrders.filter(o => o.end_date && o.end_date.startsWith(key))
+      .reduce((s, o) => s + Number(o.total_amount), 0);
     
     const expense = [
       ...transactions.filter(t => t.type === 'expense' && t.status === 'paid' && t.date.startsWith(key)),
@@ -266,7 +312,8 @@ export function Finance({ userId }: FinanceProps) {
             </div>
           </div>
           <div className="flex items-center gap-3 w-full lg:w-auto mt-2 lg:mt-0">
-            <button onClick={() => handleOpenModal('expense')} className="w-full lg:w-auto bg-[#1e3a5f] text-white px-4 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#152a45] transition-colors"><Plus className="w-4 h-4" />Nova Despesa</button>
+            <button onClick={handleExportExcel} className="w-full lg:w-auto bg-green-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-green-700 transition-colors shadow-sm"><Download className="w-4 h-4" />Exportar</button>
+            <button onClick={() => handleOpenModal('expense')} className="w-full lg:w-auto bg-[#1e3a5f] text-white px-4 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#152a45] transition-colors shadow-sm"><Plus className="w-4 h-4" />Nova Despesa</button>
           </div>
         </div>
         {loading ? (
