@@ -330,7 +330,7 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
                       }}
                     >
                       <td className="py-2 text-slate-800">{o.customer_name}</td>
-                      <td className="py-2 text-slate-600">{new Date(o.start_date + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
+                      <td className="py-2 text-slate-600">{new Date(o.start_date).toLocaleDateString('pt-BR')}</td>
                       <td className="py-2 text-slate-800 font-medium">{fmt(Number(o.total_amount))}</td>
                       <td className="py-2">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${
@@ -407,7 +407,7 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
                         {o.items.map((it: any) => `${it.quantity}x ${it.equipmentName}`).join(', ')}
                       </td>
                       <td className={`py-2.5 font-medium ${o.end_date === todayStr ? 'text-blue-600' : 'text-slate-600'}`}>
-                        {new Date(o.end_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                        {new Date(o.end_date).toLocaleDateString('pt-BR')}
                         {o.end_date === todayStr && <span className="ml-2 text-[10px] bg-blue-100 px-1.5 py-0.5 rounded-full">Hoje</span>}
                       </td>
                       <td className="py-2.5 text-slate-700 font-bold text-right">{fmt(Number(o.total_amount))}</td>
@@ -442,7 +442,7 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
                       <td className="py-2.5 text-slate-500">
                         {o.items.map((it: any) => `${it.quantity}x ${it.equipmentName}`).join(', ')}
                       </td>
-                      <td className="py-2.5 text-slate-600">{new Date(o.end_date + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
+                      <td className="py-2.5 text-slate-600">{new Date(o.end_date).toLocaleDateString('pt-BR')}</td>
                       <td className="py-2.5 text-slate-700 font-bold text-right">{fmt(Number(o.total_amount))}</td>
                     </tr>
                   ))}
@@ -475,7 +475,7 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
                       <td className="py-2.5 text-slate-500">
                         {o.items.map((it: any) => `${it.quantity}x ${it.equipmentName}`).join(', ')}
                       </td>
-                      <td className="py-2.5 text-slate-600">{new Date(o.end_date + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
+                      <td className="py-2.5 text-slate-600">{new Date(o.end_date).toLocaleDateString('pt-BR')}</td>
                       <td className="py-2.5 text-slate-700 font-bold text-right">{fmt(Number(o.total_amount))}</td>
                     </tr>
                   ))}

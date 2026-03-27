@@ -315,11 +315,11 @@ export function Maintenance({ userId, initialSearch = '', initialTab = 'in_progr
                   <div className="flex flex-wrap items-center gap-4 pt-1 text-[11px] text-slate-500 font-medium">
                     <span className="flex items-center gap-1.5">
                       <Save className="w-3.5 h-3.5 text-orange-400" /> 
-                      Entrada: {new Date(m.start_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                      Entrada: {new Date(m.start_date).toLocaleDateString('pt-BR')}
                     </span>
                     <span className="flex items-center gap-1.5">
                       <CheckCircle className="w-3.5 h-3.5 text-blue-400" /> 
-                      {m.status === 'in_progress' ? 'Previsão:' : 'Conclusão:'} {m.end_date ? new Date(m.end_date + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}
+                      {m.status === 'in_progress' ? 'Previsão:' : 'Conclusão:'} {m.end_date ? new Date(m.end_date).toLocaleDateString('pt-BR') : '-'}
                     </span>
                   </div>
                 </div>

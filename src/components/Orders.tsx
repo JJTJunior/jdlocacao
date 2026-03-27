@@ -247,7 +247,7 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
         const eq = equipments.find(e => e.id === value);
         if (eq) {
           const days = prev.end_date && prev.start_date 
-            ? Math.max(1, Math.ceil((new Date(prev.end_date + 'T12:00:00').getTime() - new Date(prev.start_date + 'T12:00:00').getTime()) / 86400000))
+            ? Math.max(1, Math.ceil((new Date(prev.end_date).getTime() - new Date(prev.start_date).getTime()) / 86400000))
             : 1;
           
           const flatPrice = calculateProratedPrice(eq, days);
@@ -289,7 +289,7 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
   // This logic picks the best rate from the equipment's registration
   const refreshItemPrices = useCallback((items: any[], startDate: string, endDate: string) => {
     if (!startDate || !endDate) return items;
-    const days = Math.max(1, Math.ceil((new Date(endDate + 'T12:00:00').getTime() - new Date(startDate + 'T12:00:00').getTime()) / 86400000));
+    const days = Math.max(1, Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000));
     
     return items.map(item => {
       const eq = equipments.find(e => e.id === item.equipmentId);
@@ -876,8 +876,8 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
                   </div>
 
                   <div className="flex flex-wrap items-center gap-4 pt-2 text-[11px] text-slate-500 font-medium">
-                    <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-indigo-400" /> Saída: {new Date(order.start_date + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
-                    <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-blue-400" /> Devolução: {new Date(order.end_date + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                    <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-indigo-400" /> Saída: {new Date(order.start_date).toLocaleDateString('pt-BR')}</span>
+                    <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-blue-400" /> Devolução: {order.end_date ? new Date(order.end_date).toLocaleDateString('pt-BR') : '-'}</span>
                     <span className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-50 rounded-md border border-slate-100 italic capitalize">
                       <DollarSign className="w-3 h-3" /> {order.payment_method || 'dinheiro'}
                     </span>
@@ -1129,7 +1129,7 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
                                <div className="flex items-center gap-1.5 bg-indigo-50 text-[10px] text-indigo-600 px-3 py-1 rounded-full font-black uppercase tracking-wider shadow-sm border border-indigo-100">
                                   <Clock className="w-3.5 h-3.5" />
                                   {formData.start_date && formData.end_date 
-                                    ? `${Math.max(1, Math.ceil((new Date(formData.end_date + 'T12:00:00').getTime() - new Date(formData.start_date + 'T12:00:00').getTime()) / 86400000))} dias`
+                                    ? `${Math.max(1, Math.ceil((new Date(formData.end_date).getTime() - new Date(formData.start_date).getTime()) / 86400000))} dias`
                                     : 'Aguardando datas...'}
                                </div>
                             </div>
@@ -1240,7 +1240,7 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
         <form onSubmit={handleRenewSubmit} className="space-y-4">
           <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 mb-4">
             <p className="text-emerald-800 text-sm font-bold">Cliente: {renewingOrder?.customer_name}</p>
-            <p className="text-emerald-600/80 text-xs">Vencimento atual: {renewingOrder ? new Date(renewingOrder.end_date + 'T12:00:00').toLocaleDateString('pt-BR') : ''}</p>
+            <p className="text-emerald-600/80 text-xs">Vencimento atual: {renewingOrder ? new Date(renewingOrder.end_date).toLocaleDateString('pt-BR') : ''}</p>
           </div>
 
           <div className="space-y-1.5">

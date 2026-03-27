@@ -135,7 +135,7 @@ export function Returns({ userId, initialFilter = 'today', onBack }: ReturnsProp
                         'bg-amber-50 text-amber-700'
                       }`}>
                         {filter === 'late' && <AlertCircle className="w-3.5 h-3.5" />}
-                        {new Date(o.end_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                        {new Date(o.end_date).toLocaleDateString('pt-BR')}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right font-bold text-slate-900">
