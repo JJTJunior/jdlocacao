@@ -274,8 +274,8 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
           onClick={() => onNavigate?.('pedidos')}
           className="bg-emerald-50 rounded-xl shadow-sm border border-emerald-100 p-4 text-emerald-800 cursor-pointer hover:bg-emerald-100 hover:shadow-md hover:scale-[1.02] transition-all group"
         >
-          <div className="flex items-center gap-2 mb-2"><ClipboardList className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform" /><span className="text-sm font-medium text-emerald-700">Previsão Total (Mês + Próx)</span></div>
-          <p className="text-2xl font-bold mb-1 text-emerald-700">{fmt(stats.monthForecast + stats.nextMonthRevenue)}</p>
+          <div className="flex items-center gap-2 mb-2"><TrendingUp className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform" /><span className="text-sm font-medium text-emerald-700">Previsão Receita Próx. Mês</span></div>
+          <p className="text-2xl font-bold mb-1 text-emerald-700">{fmt(stats.nextMonthRevenue)}</p>
         </div>
 
         <div 
