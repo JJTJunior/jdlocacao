@@ -17,6 +17,7 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
     activeRentals: 0,
     maintenance: 0,
     monthRevenue: 0,
+    monthForecast: 0,
     nextMonthRevenue: 0,
     monthExpense: 0,
     yearBalance: 0,
@@ -183,7 +184,8 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
         customers: customersCount || 0,
         activeRentals: totalRented,
         maintenance: totalMaintenance,
-        monthRevenue: monthRev + monthRevPending,
+        monthRevenue: monthRev,
+        monthForecast: monthRevPending,
         nextMonthRevenue: nextMonthRev,
         monthExpense: monthExp,
         yearBalance: yearInc - yearExp,
@@ -259,16 +261,21 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
           onClick={() => onNavigate?.('financeiro')}
           className="bg-emerald-600 rounded-xl shadow-sm border border-emerald-700 p-4 text-white cursor-pointer hover:bg-emerald-700 hover:shadow-md hover:scale-[1.02] transition-all group"
         >
-          <div className="flex items-center gap-2 mb-2"><TrendingUp className="w-4 h-4 group-hover:scale-110 transition-transform" /><span className="text-sm font-medium">Receita Mês</span></div>
-          <p className="text-2xl font-bold mb-1">{fmt(stats.monthRevenue)}</p>
+          <div className="flex items-center gap-2 mb-2"><TrendingUp className="w-4 h-4 group-hover:scale-110 transition-transform" /><span className="text-sm font-medium">Receita Realizada (Mês)</span></div>
+          <div className="flex items-baseline gap-2">
+            <p className="text-2xl font-bold mb-1">{fmt(stats.monthRevenue)}</p>
+            {stats.monthForecast > 0 && (
+              <p className="text-[10px] opacity-75 font-medium italic">+ {fmt(stats.monthForecast)} a receber</p>
+            )}
+          </div>
         </div>
         
         <div 
           onClick={() => onNavigate?.('pedidos')}
-          className="bg-emerald-100 rounded-xl shadow-sm border border-emerald-200 p-4 text-emerald-800 cursor-pointer hover:bg-emerald-200 hover:shadow-md hover:scale-[1.02] transition-all group"
+          className="bg-emerald-50 rounded-xl shadow-sm border border-emerald-100 p-4 text-emerald-800 cursor-pointer hover:bg-emerald-100 hover:shadow-md hover:scale-[1.02] transition-all group"
         >
-          <div className="flex items-center gap-2 mb-2"><TrendingUp className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform" /><span className="text-sm font-medium text-emerald-700">Previsão Receita Próx. Mês</span></div>
-          <p className="text-2xl font-bold mb-1 text-emerald-700">{fmt(stats.nextMonthRevenue)}</p>
+          <div className="flex items-center gap-2 mb-2"><ClipboardList className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform" /><span className="text-sm font-medium text-emerald-700">Previsão Total (Mês + Próx)</span></div>
+          <p className="text-2xl font-bold mb-1 text-emerald-700">{fmt(stats.monthForecast + stats.nextMonthRevenue)}</p>
         </div>
 
         <div 
