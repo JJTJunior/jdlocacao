@@ -3,8 +3,12 @@
  * using the current local time. If the string is already a full
  * timestamp, returns it as-is.
  */
-export const toTimestamp = (dateStr: string): string => {
-  if (!dateStr) return new Date().toISOString();
+export const toTimestamp = (dateStr?: string | null): string => {
+  if (!dateStr) {
+    const now = new Date();
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
+    return d.toISOString();
+  }
   // Already a full timestamp (contains T or +)
   if (dateStr.includes('T') || dateStr.includes('+')) return dateStr;
   // It's a date-only string like YYYY-MM-DD — attach NOON time to avoid timezone day-shift
