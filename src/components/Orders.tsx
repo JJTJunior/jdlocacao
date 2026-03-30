@@ -114,26 +114,38 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
   };
 
   const updateEquipmentStock = async (eqId: string, q: number, deltaAvailable: number, deltaRented: number, lotNumber?: string) => {
-    const { data: eq } = await supabase.from('equipments').select('stock_available, stock_rented, lots').eq('id', eqId).single();
+    const { data: eq, error: selError } = await supabase.from('equipments').select('stock_available, stock_rented, lots').eq('id', eqId).single();
+    if (selError) {
+      console.error('Error fetching equipment for stock update:', selError);
+      return;
+    }
+
     if (eq) {
       let updatedLots = eq.lots || [];
       if (lotNumber && updatedLots.length > 0) {
         updatedLots = updatedLots.map((l: any) => {
           if (l.lot_number === lotNumber) {
-            return { ...l, quantity: Math.max(0, l.quantity + (deltaAvailable * q)) };
+            const newQ = Math.max(0, Number(l.quantity) + (deltaAvailable * q));
+            return { ...l, quantity: newQ };
           }
           return l;
         });
       }
 
-      await supabase.from('equipments').update({
-        stock_available: (eq.stock_available || 0) + (deltaAvailable * q),
-        stock_rented: (eq.stock_rented || 0) + (deltaRented * q),
+      const { error: updError } = await supabase.from('equipments').update({
+        stock_available: Math.max(0, (Number(eq.stock_available) || 0) + (deltaAvailable * q)),
+        stock_rented: Math.max(0, (Number(eq.stock_rented) || 0) + (deltaRented * q)),
         lots: updatedLots
-      }).eq('id', eqId);
+      }).eq('id', eqId).eq('user_id', userId);
+
+      if (updError) {
+        console.error('Error updating equipment stock:', updError);
+        return;
+      }
       
       // Refresh local list
-      supabase.from('equipments').select('id, name, price_per_week, price_per_day, price_per_month, stock_available, stock_rented, lots').eq('user_id', userId).then(({ data }) => data && setEquipments(data));
+      const { data: refreshedData } = await supabase.from('equipments').select('*').eq('user_id', userId);
+      if (refreshedData) setEquipments(refreshedData);
     }
   };
 
@@ -247,7 +259,8 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
           };
         }
       } else {
-        items[idx] = { ...items[idx], [field]: value };
+        const finalValue = field === 'quantity' ? parseInt(value) || 0 : value;
+        items[idx] = { ...items[idx], [field]: finalValue };
       }
       return { ...prev, items };
     });

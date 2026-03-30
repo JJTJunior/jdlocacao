@@ -62,6 +62,13 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
       const trList = transactions || [];
       const maintList = maintenances || [];
 
+      console.log('Dashboard Data Load:', {
+        equipments: eqList.length,
+        orders: ordList.length,
+        rentedOrders: ordList.filter(o => o.status === 'rented').length,
+        transactions: trList.length
+      });
+
       const combinedTrans = [
         ...trList,
         ...maintList.filter((m: any) => m.cost > 0).map((m: any) => ({
