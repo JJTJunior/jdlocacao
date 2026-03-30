@@ -507,11 +507,7 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
       
       console.log('Data fetched:', { company: !!company, customer: !!customer });
 
-    const fmtDate = (s: string) => { 
-      if (!s) return '-';
-      const [y, m, d] = s.split('-'); 
-      return `${d}/${m}/${y}`; 
-    };
+    const fmtDate = (s: string) => formatSafeDateTime(s);
     const fmtR = (v: number) => `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     
     const companyName = company?.name || 'JD LOCAÇÃO';
