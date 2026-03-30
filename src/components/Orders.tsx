@@ -1077,11 +1077,18 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
                           onChange={e => handleItemChange(i, 'equipmentId', e.target.value)}
                         >
                           <option value="" disabled>Selecione um equipamento...</option>
-                          {equipments.map(eq => (
-                            <option key={eq.id} value={eq.id} disabled={eq.stock_available === 0}>
-                              {eq.name} ({eq.stock_available} em estoque)
-                            </option>
-                          ))}
+                          {equipments.map(eq => {
+                            const usedElsewhere = formData.items
+                              .filter((_, idx) => idx !== i)
+                              .filter(it => it.equipmentId === eq.id)
+                              .reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
+                            const realDisp = Math.max(0, (eq.stock_available || 0) - usedElsewhere);
+                            return (
+                              <option key={eq.id} value={eq.id} disabled={realDisp === 0}>
+                                {eq.name} ({realDisp} em estoque)
+                              </option>
+                            );
+                          })}
                         </select>
                         <ChevronDown className="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                       </div>
@@ -1100,11 +1107,22 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
                             onChange={e => handleItemChange(i, 'lotNumber', e.target.value)}
                           >
                             <option value="" disabled>Lote / Unidade</option>
-                            {item.equipmentId && equipments.find(e => e.id === item.equipmentId)?.lots?.map(l => (
-                              <option key={l.lot_number} value={l.lot_number} disabled={l.quantity === 0}>
-                                {l.lot_number} ({l.quantity} disp.)
-                              </option>
-                            ))}
+                            {item.equipmentId && (() => {
+                              const eq = equipments.find(e => e.id === item.equipmentId);
+                              if (!eq || !eq.lots) return null;
+                              return eq.lots.map((l: any) => {
+                                const usedInOtherRows = formData.items
+                                  .filter((_, idx) => idx !== i)
+                                  .filter(it => it.equipmentId === eq.id && it.lotNumber === l.lot_number)
+                                  .reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
+                                const lotRealDisp = Math.max(0, (l.quantity || 0) - usedInOtherRows);
+                                return (
+                                  <option key={l.lot_number} value={l.lot_number} disabled={lotRealDisp === 0}>
+                                    {l.lot_number} ({lotRealDisp} disp.)
+                                  </option>
+                                );
+                              });
+                            })()}
                           </select>
                           <ChevronDown className="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2 text-indigo-400 pointer-events-none" />
                         </div>
