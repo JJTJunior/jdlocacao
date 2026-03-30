@@ -184,48 +184,65 @@ export function Finance({ userId }: FinanceProps) {
   ].reduce((s, item) => s + Number('amount' in item ? item.amount : item.cost), 0);
 
   const handleExportExcel = () => {
-    const dataToExport = combinedTransactions
-      .filter(t => categoryFilter === 'all' || t.category === categoryFilter)
-      .filter(t => monthFilter === 'all' || t.date.startsWith(monthFilter))
-      .sort((a, b) => b.date.localeCompare(a.date))
-      .map(t => {
-        return {
+    try {
+      const dataToExport = combinedTransactions
+        .filter(t => categoryFilter === 'all' || t.category === categoryFilter)
+        .filter(t => {
+          if (monthFilter === 'all') return true;
+          if (!t.date) return false;
+          return t.date.startsWith(monthFilter);
+        })
+        .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+        .map(t => ({
           Data: formatSafeDateTime(t.date),
-        Categoria: t.category,
-        Descrição: t.description,
-        Tipo: t.type === 'income' ? 'Receita' : 'Despesa',
-        'Valor (R$)': t.amount,
-        Status: t.status === 'paid' ? 'Pago' : 'Pendente'
-      };
-    });
+          Categoria: t.category,
+          Descrição: t.description,
+          Tipo: t.type === 'income' ? 'Receita' : 'Despesa',
+          'Valor (R$)': t.amount,
+          Status: t.status === 'paid' ? 'Pago' : 'Pendente'
+        }));
 
-    if (dataToExport.length === 0) {
-      alert('Nenhuma transação para exportar.');
-      return;
+      if (dataToExport.length === 0) {
+        alert('Nenhuma transação para exportar para o filtro selecionado.');
+        return;
+      }
+
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      
+      const wscols = [
+        { wch: 12 },
+        { wch: 20 },
+        { wch: 40 },
+        { wch: 10 },
+        { wch: 15 },
+        { wch: 10 },
+      ];
+      ws['!cols'] = wscols;
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Transações');
+      
+      let filename = 'relatorio_financeiro';
+      if (monthFilter !== 'all') {
+        filename += `_${monthFilter}`;
+      }
+      filename += '.xlsx';
+
+      // Use a more robust way to trigger the download
+      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (error) {
+      console.error('Erro ao exportar Excel:', error);
+      alert('Ocorreu um erro ao gerar o arquivo Excel. Por favor, tente novamente.');
     }
-
-    const ws = XLSX.utils.json_to_sheet(dataToExport);
-    
-    const wscols = [
-      { wch: 12 },
-      { wch: 20 },
-      { wch: 40 },
-      { wch: 10 },
-      { wch: 15 },
-      { wch: 10 },
-    ];
-    ws['!cols'] = wscols;
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Transações');
-    
-    let filename = 'relatorio_financeiro';
-    if (monthFilter !== 'all') {
-      filename += `_${monthFilter}`;
-    }
-    filename += '.xlsx';
-
-    XLSX.writeFile(wb, filename);
   };
 
   const yearIncome = transactions
