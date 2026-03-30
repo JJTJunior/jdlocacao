@@ -89,10 +89,17 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
         !trList.some(t => t.category === 'Aluguel' && t.description.includes(`(Contrato: ${o.contract_number || 'S/N'})`))
       );
 
-      // Concluded Transactions for Current Metrics (Only status === 'paid' + legacy)
-      const monthRev = trList
+      // Paid Transactions for Current Month
+      const monthRevPaid = trList
         .filter(t => t.type === 'income' && t.status === 'paid' && t.date && t.date.startsWith(currentMonth))
-        .reduce((sum, t) => sum + Number(t.amount), 0) +
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+
+      // Pending Transactions for Current Month (Forecast)
+      const monthRevPending = trList
+        .filter(t => t.type === 'income' && t.status === 'pending' && t.date && t.date.startsWith(currentMonth))
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+
+      const monthRev = monthRevPaid +
         legacyOrders.filter(o => o.end_date && o.end_date.startsWith(currentMonth))
         .reduce((sum, o) => sum + Number(o.total_amount), 0);
       
@@ -101,25 +108,35 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
         ...maintList.filter((m: any) => m.status === 'completed' && m.cost > 0 && (m.end_date || m.start_date).startsWith(currentMonth))
       ].reduce((sum, item) => sum + Number(item.amount || item.cost), 0);
       
-      // Next Month Forecast: Anything scheduled + rented orders returning next month
+      // Next Month Forecast: Anything scheduled or rented orders returning next month
       const nextMonthRentalsRev = ordList
         .filter(o => o.status === 'rented' && o.end_date && o.end_date.startsWith(nextMonthStr))
         .reduce((sum, o) => sum + Number(o.total_amount), 0);
+        
       const nextMonthScheduledRev = trList
         .filter(t => t.type === 'income' && t.date && t.date.startsWith(nextMonthStr))
         .reduce((sum, t) => sum + Number(t.amount), 0);
+
+      console.log('Finance debug:', {
+        currentMonth,
+        nextMonthStr,
+        monthRevPaid,
+        monthRevPending,
+        nextMonthRentalsRev,
+        nextMonthScheduledRev
+      });
       const nextMonthRev = nextMonthRentalsRev + nextMonthScheduledRev;
       
       const yearInc = trList
-        .filter(t => t.type === 'income' && t.status === 'paid' && t.date && t.date.startsWith(currentYear))
-        .reduce((sum, t) => sum + Number(t.amount), 0) + 
+        .filter(t => t.type === 'income' && (t.status === 'paid' || t.status === 'pending') && t.date && t.date.startsWith(currentYear))
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0) + 
         legacyOrders.filter(o => o.end_date && o.end_date.startsWith(currentYear))
-        .reduce((sum, o) => sum + Number(o.total_amount), 0);
+        .reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
 
       const yearExp = [
         ...trList.filter(t => t.type === 'expense' && t.status === 'paid' && t.date && t.date.startsWith(currentYear)),
         ...maintList.filter((m: any) => m.status === 'completed' && m.cost > 0 && (m.end_date || m.start_date).startsWith(currentYear)).map(m => ({ amount: m.cost }))
-      ].reduce((sum, t) => sum + Number(t.amount), 0);
+      ].reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
       // Chart Data (Concluded only)
       const cData = Array.from({ length: 6 }, (_, i) => {
@@ -166,7 +183,7 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
         customers: customersCount || 0,
         activeRentals: totalRented,
         maintenance: totalMaintenance,
-        monthRevenue: monthRev,
+        monthRevenue: monthRev + monthRevPending,
         nextMonthRevenue: nextMonthRev,
         monthExpense: monthExp,
         yearBalance: yearInc - yearExp,
@@ -175,9 +192,9 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
         returnsToday,
         returnsNext3Days,
         returnsLate,
-        returnsThisWeek: returnsThisWeekList,
-        returnsNextWeek: returnsNextWeekList,
-        returnsFuture: returnsFutureList,
+        returnsThisWeek: returnsThisWeekList.sort((a,b) => a.end_date.localeCompare(b.end_date)),
+        returnsNextWeek: returnsNextWeekList.sort((a,b) => a.end_date.localeCompare(b.end_date)),
+        returnsFuture: returnsFutureList.sort((a,b) => a.end_date.localeCompare(b.end_date)),
         equipmentStock: stock
       });
 

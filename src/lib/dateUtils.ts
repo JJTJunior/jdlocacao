@@ -7,10 +7,9 @@ export const toTimestamp = (dateStr: string): string => {
   if (!dateStr) return new Date().toISOString();
   // Already a full timestamp (contains T or +)
   if (dateStr.includes('T') || dateStr.includes('+')) return dateStr;
-  // It's a date-only string like YYYY-MM-DD — attach current time
-  const now = new Date();
+  // It's a date-only string like YYYY-MM-DD — attach NOON time to avoid timezone day-shift
   const [year, month, day] = dateStr.split('-').map(Number);
-  const withTime = new Date(year, month - 1, day, now.getHours(), now.getMinutes(), now.getSeconds());
+  const withTime = new Date(year, month - 1, day, 12, 0, 0);
   return withTime.toISOString();
 };
 
