@@ -146,21 +146,10 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
         }
       }
       
-      // Remove associated transactions from finance (search by BASE contract number in description)
+      // Remove only the specific transaction for this exact contract number
       if (orderToDelete.contract_number) {
-        const baseMatch = orderToDelete.contract_number.match(/(.*)-R\d+$/);
-        const baseContractNumber = baseMatch ? baseMatch[1] : orderToDelete.contract_number;
-
-        const { data: transToDelete } = await supabase
-          .from('transactions')
-          .select('id')
-          .ilike('description', `%${baseContractNumber}%`);
-          
-        if (transToDelete && transToDelete.length > 0) {
-          for (const t of transToDelete) {
-            await supabase.from('transactions').delete().eq('id', t.id);
-          }
-        }
+        const description = `Locação: ${orderToDelete.customer_name} (Contrato: ${orderToDelete.contract_number})`;
+        await supabase.from('transactions').delete().eq('user_id', userId).eq('description', description);
       }
 
       await remove(orderToDelete.id); 
@@ -174,7 +163,7 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
     setRenewSaving(true);
 
     try {
-      // Cycle the contract number to prevent Finance overwrites and keep history clean
+      // 1. Determine new contract number
       const baseMatch = renewingOrder.contract_number?.match(/(.*)-R(\d+)$/);
       let newContractNumber = renewingOrder.contract_number;
       if (baseMatch) {
@@ -183,46 +172,44 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
         newContractNumber = `${renewingOrder.contract_number || `LOC-${Math.floor(Math.random() * 1000000)}`}-R1`;
       }
 
-      // 1. Update order: Reset cycle to start from old end_date
-      const { error: updError } = await update(renewingOrder.id, {
-        start_date: new Date().toISOString(), // Data/hora da renovação (agora)
-        end_date: toTimestamp(renewEndDate),
-        total_amount: Number(renewAmount),  // Apenas o que falta pra receber
-        contract_number: newContractNumber
-      });
-
-      if (updError) throw updError;
-
-      // 2. Finalize previous cycle transaction (mark as paid and set date to cycle end)
+      // 2. Mark CURRENT cycle as completed to preserve history
+      // We also update its transaction to 'paid'
+      await update(renewingOrder.id, { status: 'completed' });
+      
       const oldDescription = `Locação: ${renewingOrder.customer_name} (Contrato: ${renewingOrder.contract_number})`;
-      const { data: oldTrans } = await supabase
-        .from('transactions')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('description', oldDescription)
-        .maybeSingle();
+      await supabase.from('transactions').update({
+        status: 'paid',
+        date: new Date().toISOString()
+      }).eq('user_id', userId).eq('description', oldDescription);
 
-      if (oldTrans) {
-        await supabase.from('transactions').update({
-          status: 'paid',
-          date: new Date().toISOString()
-        }).eq('id', oldTrans.id);
-      }
+      // 3. Insert NEW cycle record for the renewal
+      const { data: newOrder, error: insErr } = await insert({
+        customer_id: renewingOrder.customer_id,
+        customer_name: renewingOrder.customer_name,
+        customer_phone: renewingOrder.customer_phone,
+        items: renewingOrder.items,
+        start_date: new Date().toISOString(), // Begins now (renewal moment)
+        end_date: toTimestamp(renewEndDate),
+        total_amount: Number(renewAmount),
+        contract_number: newContractNumber,
+        status: 'rented',
+        payment_method: renewingOrder.payment_method || 'Dinheiro',
+        observations: renewingOrder.observations || ''
+      } as any);
 
-      // 3. Register new transaction for the renewal
+      if (insErr) throw insErr;
+
+      // 4. Register transaction for the NEW cycle
       const description = `Locação: ${renewingOrder.customer_name} (Contrato: ${newContractNumber})`;
-      const payload = {
+      await supabase.from('transactions').insert({
         user_id: userId,
-        date: new Date().toISOString(), // date of renewal (now)
+        date: new Date().toISOString(),
         description,
         category: 'Aluguel',
         type: 'income',
         amount: Number(renewAmount),
-        status: 'pending' // Aguardando recebimento
-      };
-
-      const { error: insError } = await supabase.from('transactions').insert(payload);
-      if (insError) throw insError;
+        status: 'pending'
+      });
 
       setRenewingOrder(null);
       setRenewEndDate('');
