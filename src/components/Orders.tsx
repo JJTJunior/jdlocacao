@@ -583,8 +583,8 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
           <tbody>
             ${(order.items || []).map((i: any) => {
               // Fallback to equipment price if not saved in item
-              const unitPrice = i.price || equipments.find(e => e.id === i.equipmentId)?.price_per_week || 0;
-              const lineTotal = unitPrice * i.quantity * days;
+              const unitPrice = i.price || 0;
+              const lineTotal = unitPrice * i.quantity;
               return `
                 <tr>
                   <td>${i.equipmentName}</td>
