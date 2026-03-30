@@ -507,7 +507,10 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
       
       console.log('Data fetched:', { company: !!company, customer: !!customer });
 
-    const fmtDate = (s: string) => formatSafeDateTime(s);
+    const fmtDatePrint = (s: string) => {
+      console.log('fmtDatePrint receiving:', s);
+      return formatSafeDateTime(s);
+    };
     const fmtR = (v: number) => `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     
     const companyName = company?.name || 'JD LOCAÇÃO';
@@ -563,12 +566,12 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
 
         <div class="stats-grid">
           <div class="stat-box">
-            <span class="stat-label">Data de Saída</span>
-            <span class="stat-value">${fmtDate(order.start_date)}</span>
+            <span class="stat-label">Data de Início</span>
+            <span class="stat-value">${fmtDatePrint(order.start_date)}</span>
           </div>
           <div class="stat-box">
             <span class="stat-label">Devolução Prevista</span>
-            <span class="stat-value">${fmtDate(order.end_date)}</span>
+            <span class="stat-value">${fmtDatePrint(order.end_date)}</span>
           </div>
           <div class="stat-box">
             <span class="stat-label">Forma de Pagamento</span>
