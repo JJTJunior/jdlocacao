@@ -47,7 +47,7 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingOrder, setViewingOrder] = useState<OrderRow | null>(null);
-  const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
+  const [orderToDelete, setOrderToDelete] = useState<OrderRow | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Renew States
@@ -139,33 +139,31 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
 
   const handleDeleteConfirm = async () => {
     if (orderToDelete) { 
-      const order = orders.find(o => o.id === orderToDelete);
-      if (order) {
-        if (order.status === 'rented') {
-          // Restore stock
-          for (const item of (order.items || [])) {
-            await updateEquipmentStock(item.equipmentId, item.quantity, 1, -1, item.lotNumber);
-          }
+      if (orderToDelete.status === 'rented') {
+        // Restore stock
+        for (const item of (orderToDelete.items || [])) {
+          await updateEquipmentStock(item.equipmentId, item.quantity, 1, -1, item.lotNumber);
         }
-        
-        // Remove associated transactions from finance (search by BASE contract number in description)
-        if (order.contract_number) {
-          const baseMatch = order.contract_number.match(/(.*)-R\d+$/);
-          const baseContractNumber = baseMatch ? baseMatch[1] : order.contract_number;
+      }
+      
+      // Remove associated transactions from finance (search by BASE contract number in description)
+      if (orderToDelete.contract_number) {
+        const baseMatch = orderToDelete.contract_number.match(/(.*)-R\d+$/);
+        const baseContractNumber = baseMatch ? baseMatch[1] : orderToDelete.contract_number;
 
-          const { data: transToDelete } = await supabase
-            .from('transactions')
-            .select('id')
-            .ilike('description', `%${baseContractNumber}%`);
-            
-          if (transToDelete && transToDelete.length > 0) {
-            for (const t of transToDelete) {
-              await supabase.from('transactions').delete().eq('id', t.id);
-            }
+        const { data: transToDelete } = await supabase
+          .from('transactions')
+          .select('id')
+          .ilike('description', `%${baseContractNumber}%`);
+          
+        if (transToDelete && transToDelete.length > 0) {
+          for (const t of transToDelete) {
+            await supabase.from('transactions').delete().eq('id', t.id);
           }
         }
       }
-      await remove(orderToDelete); 
+
+      await remove(orderToDelete.id); 
       setOrderToDelete(null); 
     }
   };
@@ -937,7 +935,7 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
                       <CheckCircle2 className="w-3.5 h-3.5" /> Devolver
                     </button>
                     <button 
-                       onClick={() => setOrderToDelete(order.id)}
+                       onClick={() => setOrderToDelete(order)}
                        className="px-4 py-1.5 bg-white text-slate-400 border border-slate-200 rounded-lg text-xs font-bold hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all shadow-sm"
                     >
                       Excluir
@@ -1231,7 +1229,14 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
             <Trash2 className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
             <div className="space-y-1">
               <p className="font-bold text-red-800 text-sm">Esta ação é irreversível!</p>
-              <p className="text-red-600/80 text-xs">O aluguel será removido permanentemente do sistema e os equipamentos voltarão ao estoque.</p>
+              <p className="text-red-600/80 text-xs">
+                Você está prestes a excluir o contrato: <br/>
+                <strong className="text-red-700 font-black uppercase text-sm">
+                  {orderToDelete?.contract_number || 'S/N'}
+                </strong> 
+                <br/>do cliente <strong className="text-red-700 font-bold">{orderToDelete?.customer_name}</strong>.
+              </p>
+              <p className="text-red-400 text-[10px] pt-1">O aluguel será removido permanentemente e os equipamentos voltarão ao estoque.</p>
             </div>
           </div>
           <div className="flex justify-end gap-3">
