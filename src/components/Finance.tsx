@@ -386,7 +386,7 @@ export function Finance({ userId }: FinanceProps) {
                     </div>
 
                     <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-slate-50">
-                      {!t.isMaintenance && t.category !== 'Aluguel' ? (
+                      {!t.isMaintenance ? (
                         <>
                           <button 
                             onClick={() => handleEdit(t)} 
