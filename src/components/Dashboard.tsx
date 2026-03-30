@@ -82,7 +82,7 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
       // Calculate stats
       const totalEquipments = eqList.reduce((sum, eq) => sum + ((eq.stock_available || 0) + (eq.stock_rented || 0) + (eq.stock_maintenance || 0)), 0);
       const totalRented = ordList.filter(o => o.status === 'rented').length;
-      const totalMaintenance = maintList.filter((m: any) => m.status === 'in_progress').reduce((sum: number, m: any) => sum + (m.quantity || 0), 0);
+      const totalMaintenance = eqList.reduce((sum, eq) => sum + (eq.stock_maintenance || 0), 0);
 
       // Legacy fallback: orders that are completed but don't have a tracking transaction
       const legacyOrders = ordList.filter(o => 
@@ -161,12 +161,12 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
 
       // Returns
       const rentedOrders = ordList.filter(o => o.status === 'rented');
-      const returnsToday = rentedOrders.filter(o => o.end_date && o.end_date === todayStr).length;
-      const returnsNext3Days = rentedOrders.filter(o => o.end_date && o.end_date > todayStr && o.end_date <= threeDaysStr).length;
-      const returnsLate = rentedOrders.filter(o => o.end_date && o.end_date < todayStr).length;
-      const returnsThisWeekList = rentedOrders.filter(o => o.end_date && o.end_date >= todayStr && o.end_date <= sevenDaysStr);
-      const returnsNextWeekList = rentedOrders.filter(o => o.end_date && o.end_date > sevenDaysStr && o.end_date <= fourteenDaysStr);
-      const returnsFutureList = rentedOrders.filter(o => o.end_date && o.end_date > fourteenDaysStr);
+      const returnsToday = rentedOrders.filter(o => o.end_date && o.end_date.slice(0, 10) === todayStr).length;
+      const returnsNext3Days = rentedOrders.filter(o => o.end_date && o.end_date.slice(0, 10) > todayStr && o.end_date.slice(0, 10) <= threeDaysStr).length;
+      const returnsLate = rentedOrders.filter(o => o.end_date && o.end_date.slice(0, 10) < todayStr).length;
+      const returnsThisWeekList = rentedOrders.filter(o => o.end_date && o.end_date.slice(0, 10) >= todayStr && o.end_date.slice(0, 10) <= sevenDaysStr);
+      const returnsNextWeekList = rentedOrders.filter(o => o.end_date && o.end_date.slice(0, 10) > sevenDaysStr && o.end_date.slice(0, 10) <= fourteenDaysStr);
+      const returnsFutureList = rentedOrders.filter(o => o.end_date && o.end_date.slice(0, 10) > fourteenDaysStr);
 
       // Equipment Stock
       const stock = eqList.map(eq => {
