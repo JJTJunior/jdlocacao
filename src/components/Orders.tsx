@@ -514,7 +514,13 @@ export function Orders({ userId, initialSearch = '', initialTab = 'ativos' }: Or
     const fmtR = (v: number) => `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     
     const companyName = company?.name || 'JD LOCAÇÃO';
-    const companyAddress = company ? `${company.address || ''}, ${company.city || ''} - ${company.state || ''}` : 'Jaboatão, PE';
+    const addressParts = [];
+    if (company?.address) addressParts.push(company.address);
+    if (company?.city) addressParts.push(company.city);
+    let companyAddress = addressParts.join(', ');
+    if (company?.state) companyAddress += ` - ${company.state}`;
+    if (!companyAddress) companyAddress = 'Jaboatão, PE';
+
     const companyEmail = company?.email || 'jdlocacao2014@outlook.com';
     const companyLogo = company?.logo || '';
     
