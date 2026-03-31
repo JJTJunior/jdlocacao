@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Package, Users, ClipboardList, Wrench, TrendingUp, TrendingDown, DollarSign, ArrowRight, RotateCcw, Loader2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { supabase } from '../lib/supabaseClient';
-import { formatSafeDate } from '../lib/dateUtils';
+import { formatSafeDate, getLocalDateISO } from '../lib/dateUtils';
 
 interface DashboardProps {
   userId?: string;
@@ -161,12 +161,27 @@ export function Dashboard({ userId, onNavigate }: DashboardProps) {
 
       // Returns
       const rentedOrders = ordList.filter(o => o.status === 'rented');
-      const returnsToday = rentedOrders.filter(o => o.end_date && o.end_date.slice(0, 10) === todayStr).length;
-      const returnsNext3Days = rentedOrders.filter(o => o.end_date && o.end_date.slice(0, 10) > todayStr && o.end_date.slice(0, 10) <= threeDaysStr).length;
-      const returnsLate = rentedOrders.filter(o => o.end_date && o.end_date.slice(0, 10) < todayStr).length;
-      const returnsThisWeekList = rentedOrders.filter(o => o.end_date && o.end_date.slice(0, 10) >= todayStr && o.end_date.slice(0, 10) <= sevenDaysStr);
-      const returnsNextWeekList = rentedOrders.filter(o => o.end_date && o.end_date.slice(0, 10) > sevenDaysStr && o.end_date.slice(0, 10) <= fourteenDaysStr);
-      const returnsFutureList = rentedOrders.filter(o => o.end_date && o.end_date.slice(0, 10) > fourteenDaysStr);
+      const returnsToday = rentedOrders.filter(o => getLocalDateISO(o.end_date) === todayStr).length;
+      const returnsNext3Days = rentedOrders.filter(o => {
+        const iso = getLocalDateISO(o.end_date);
+        return iso && iso > todayStr && iso <= threeDaysStr;
+      }).length;
+      const returnsLate = rentedOrders.filter(o => {
+        const iso = getLocalDateISO(o.end_date);
+        return iso && iso < todayStr;
+      }).length;
+      const returnsThisWeekList = rentedOrders.filter(o => {
+        const iso = getLocalDateISO(o.end_date);
+        return iso && iso >= todayStr && iso <= sevenDaysStr;
+      });
+      const returnsNextWeekList = rentedOrders.filter(o => {
+        const iso = getLocalDateISO(o.end_date);
+        return iso && iso > sevenDaysStr && iso <= fourteenDaysStr;
+      });
+      const returnsFutureList = rentedOrders.filter(o => {
+        const iso = getLocalDateISO(o.end_date);
+        return iso && iso > fourteenDaysStr;
+      });
 
       // Equipment Stock
       const stock = eqList.map(eq => {

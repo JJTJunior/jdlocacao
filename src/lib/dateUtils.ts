@@ -93,3 +93,14 @@ export const formatSafeDateTime = (dateStr: string | null | undefined): string =
   }
   return d.toLocaleDateString('pt-BR');
 };
+
+/**
+ * Robustly returns YYYY-MM-DD for any date input, 
+ * using local timezone to avoid day-shift.
+ */
+export const getLocalDateISO = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return '';
+  const d = parseSafeDate(dateStr);
+  if (!d) return '';
+  return d.toLocaleDateString('en-CA');
+};

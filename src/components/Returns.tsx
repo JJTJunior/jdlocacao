@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { RotateCcw, Calendar, AlertCircle, Loader2, ChevronLeft } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
-import { formatSafeDate } from '../lib/dateUtils';
+import { formatSafeDate, getLocalDateISO } from '../lib/dateUtils';
 
 interface ReturnsProps {
   userId: string;
@@ -30,11 +30,17 @@ export function Returns({ userId, initialFilter = 'today', onBack }: ReturnsProp
       if (data) {
         let filtered = data;
         if (filter === 'today') {
-          filtered = data.filter(o => o.end_date === todayStr);
+          filtered = data.filter(o => getLocalDateISO(o.end_date) === todayStr);
         } else if (filter === 'next3') {
-          filtered = data.filter(o => o.end_date && o.end_date > todayStr && o.end_date <= threeDaysStr);
+          filtered = data.filter(o => {
+            const iso = getLocalDateISO(o.end_date);
+            return iso && iso > todayStr && iso <= threeDaysStr;
+          });
         } else if (filter === 'late') {
-          filtered = data.filter(o => o.end_date && o.end_date < todayStr);
+          filtered = data.filter(o => {
+            const iso = getLocalDateISO(o.end_date);
+            return iso && iso < todayStr;
+          });
         }
         setOrders(filtered.sort((a, b) => (a.end_date || '').localeCompare(b.end_date || '')));
       }
